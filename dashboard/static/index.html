@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guardian · Unit 100 control room</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/vendor/uPlot.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the process view</a>
+
+  <header class="bar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="19" height="19" rx="2"/>
+        <circle cx="12" cy="12" r="7.5"/>
+        <line x1="4.5" y1="12" x2="19.5" y2="12"/>
+      </svg>
+      <div>
+        <h1>Guardian</h1>
+        <p class="sub">Tennessee Eastman unit 100 · simulated plant</p>
+      </div>
+    </div>
+
+    <div class="clock" aria-live="off">
+      <span class="clock-label">Plant time</span>
+      <span class="clock-value" id="clock">–</span>
+    </div>
+
+    <div class="run">
+      <button class="btn" id="runBtn" type="button" aria-pressed="true">Pause</button>
+      <label class="speed">
+        <span class="visually-hidden">Simulation speed</span>
+        <select id="speed"></select>
+      </label>
+    </div>
+
+    <nav class="tabs" aria-label="Panels">
+      <button class="tab" type="button" data-drawer="trainer" aria-expanded="false">Trainer</button>
+      <button class="tab" type="button" data-drawer="audit" aria-expanded="false">Audit trail</button>
+    </nav>
+
+    <div class="link" id="link" role="status">
+      <span class="dot" aria-hidden="true"></span><span id="linkText">Connecting</span>
+    </div>
+  </header>
+
+  <div class="trip" id="trip" hidden role="alert"></div>
+
+  <main id="main" class="grid">
+    <section class="panel process" aria-labelledby="h-process">
+      <div class="panel-head">
+        <h2 id="h-process">Process</h2>
+        <p class="hint">Select an instrument to trend it. A violet ring means Guardian doubts that reading.</p>
+      </div>
+      <div class="flow-wrap">
+        <svg id="flowsheet" viewBox="0 0 1180 500" role="group" aria-label="Process flow diagram with live instrument readings"></svg>
+      </div>
+    </section>
+
+    <section class="panel guardian" aria-labelledby="h-guardian">
+      <div class="panel-head">
+        <h2 id="h-guardian">Guardian</h2>
+        <span class="since" id="since"></span>
+      </div>
+      <div class="verdict" id="verdict" data-cls="normal">
+        <svg class="verdict-icon" id="verdictIcon" viewBox="0 0 20 20" aria-hidden="true"></svg>
+        <div>
+          <p class="verdict-text" id="verdictText">Waiting for the plant</p>
+          <p class="verdict-action" id="verdictAction"></p>
+        </div>
+      </div>
+      <div class="evidence">
+        <h3>Evidence</h3>
+        <ul id="evidence"><li class="muted">No deviations beyond their limits.</li></ul>
+      </div>
+      <div class="quality">
+        <h3>Product quality estimate</h3>
+        <div class="quality-row">
+          <div>
+            <span class="q-value" id="ssValue">–</span>
+            <span class="q-unit">mol% E in product</span>
+          </div>
+          <span class="state" id="ssStatus" data-state="ok">OK</span>
+        </div>
+        <p class="q-note" id="ssNote">Lab-grade analyzer AI-138 reports every 15 min, 15 min late.</p>
+      </div>
+      <div class="agreement">
+        <h3>Agreement with the plant model</h3>
+        <p class="hint">Tags furthest from what the rest of the plant implies. 1.0 is the alarm limit.</p>
+        <ol id="agreement"></ol>
+      </div>
+    </section>
+
+    <section class="panel trends" aria-labelledby="h-trends">
+      <div class="panel-head">
+        <h2 id="h-trends">Trends</h2>
+        <label class="trend-pick">
+          <span>Instrument</span>
+          <select id="trendTag"></select>
+        </label>
+      </div>
+      <div class="charts">
+        <figure class="chart">
+          <figcaption id="trendTitle">–</figcaption>
+          <div id="chartTag" class="plot"></div>
+          <ul class="legend" id="legendTag"></ul>
+        </figure>
+        <figure class="chart">
+          <figcaption>Product E: soft sensor vs analyzer</figcaption>
+          <div id="chartSS" class="plot"></div>
+          <ul class="legend" id="legendSS"></ul>
+        </figure>
+      </div>
+    </section>
+
+    <section class="panel alarms" aria-labelledby="h-alarms">
+      <div class="panel-head">
+        <h2 id="h-alarms">Alarms</h2>
+        <span class="count" id="alarmCount"></span>
+        <button class="btn btn-quiet" id="ackAll" type="button">Acknowledge all</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Priority</th><th scope="col">Since</th><th scope="col">Tag</th>
+                <th scope="col">Message</th><th scope="col">State</th><th scope="col"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody id="alarmRows"></tbody>
+        </table>
+        <p class="empty" id="alarmEmpty">No active or unacknowledged alarms.</p>
+      </div>
+    </section>
+  </main>
+
+  <aside class="drawer" id="drawer-trainer" hidden aria-labelledby="h-trainer">
+    <div class="drawer-head">
+      <h2 id="h-trainer">Trainer</h2>
+      <button class="btn btn-quiet" type="button" data-close>Close</button>
+    </div>
+    <p class="drawer-note">These controls act on the simulator only. In a plant, Guardian is read-only and never writes to the control system.</p>
+
+    <form class="group" id="fFault">
+      <h3>Instrument fault</h3>
+      <label>Transmitter <select name="tag" id="faultTag"></select></label>
+      <div class="row">
+        <label>Type
+          <select name="kind" id="faultKind">
+            <option value="bias">Bias</option><option value="drift">Drift</option>
+            <option value="stuck">Stuck</option><option value="noise">Noise</option>
+          </select>
+        </label>
+        <label>Size <span class="field-unit"><input name="magnitude" id="faultMag" type="number" step="any" inputmode="decimal"><span id="faultUnit"></span></span></label>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Inject fault</button>
+        <button class="btn btn-quiet" type="button" id="clearFaults">Clear all faults</button>
+      </div>
+    </form>
+
+    <form class="group" id="fDist">
+      <h3>Process disturbance</h3>
+      <label>Disturbance <select name="idv" id="distSel"></select></label>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Start disturbance</button>
+      </div>
+      <ul class="active-list" id="distActive"></ul>
+    </form>
+
+    <form class="group" id="fAttack">
+      <h3>Cyber attack</h3>
+      <label>Attack <select name="preset" id="attackSel"></select></label>
+      <label class="check"><input type="checkbox" name="jitter" id="attackJitter"> Attacker adds noise to hide a replay</label>
+      <div class="actions">
+        <button class="btn btn-danger" type="submit">Launch attack</button>
+        <button class="btn btn-quiet" type="button" id="stopAttacks">Stop all attacks</button>
+      </div>
+    </form>
+
+    <form class="group" id="fSp">
+      <h3>Setpoint</h3>
+      <div class="row">
+        <label>Loop <select name="name" id="spSel"></select></label>
+        <label>Value <span class="field-unit"><input name="value" id="spVal" type="number" step="any" inputmode="decimal"><span id="spUnit"></span></span></label>
+      </div>
+      <p class="field-help" id="spHelp"></p>
+      <div class="actions"><button class="btn btn-primary" type="submit">Change setpoint</button></div>
+    </form>
+
+    <form class="group" id="fPlant">
+      <h3>Plant</h3>
+      <label class="check"><input type="checkbox" id="reveal"> Show what was injected (ground truth) on trends</label>
+      <ul class="active-list" id="truthList"></ul>
+      <div class="row">
+        <label>Random seed <input name="seed" id="seed" type="number" min="1" max="1000000" step="1"></label>
+      </div>
+      <div class="actions"><button class="btn" type="submit">Restart plant</button></div>
+    </form>
+  </aside>
+
+  <aside class="drawer" id="drawer-audit" hidden aria-labelledby="h-audit">
+    <div class="drawer-head">
+      <h2 id="h-audit">Audit trail</h2>
+      <button class="btn btn-quiet" type="button" data-close>Close</button>
+    </div>
+    <div class="chain" id="chain">Not checked yet.</div>
+    <div class="actions"><button class="btn" type="button" id="verifyChain">Verify chain</button></div>
+    <ol class="audit-list" id="auditList"></ol>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/static/vendor/uPlot.iife.min.js"></script>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

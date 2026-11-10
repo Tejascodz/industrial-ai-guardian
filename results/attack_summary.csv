@@ -1,0 +1,113 @@
+method,attack,runs,detected,median_delay_min,recognised_as_attack,trips,trips_warned
+Limit checks,multi_freeze,3,1.0,90.0,0.0,3,3
+Limit checks,replay_a_feed,3,1.0,30.0,0.0,0,0
+Limit checks,replay_a_feed_jitter,3,1.0,20.99999999999998,0.0,0,0
+Limit checks,replay_all_transmitters,3,0.6666666666666666,100.50000000000004,0.0,3,2
+Limit checks,replay_all_transmitters_jitter,3,0.3333333333333333,93.00000000000004,0.0,3,1
+Limit checks,replay_cooling_large,3,1.0,15.0,0.0,0,0
+Limit checks,replay_cooling_large_jitter,3,1.0,15.0,0.0,1,1
+Limit checks,replay_cooling_small,3,1.0,15.0,0.0,0,0
+Limit checks,replay_cooling_small_jitter,3,1.0,15.0,0.0,1,1
+Limit checks,replay_purge,3,1.0,56.99999999999996,0.0,1,1
+Limit checks,replay_purge_jitter,3,1.0,71.99999999999996,0.0,2,2
+Limit checks,replay_stripper_product,3,1.0,41.99999999999996,0.0,3,3
+Limit checks,replay_stripper_product_jitter,3,1.0,39.00000000000002,0.0,3,3
+Limit checks,stealthy_coordinated_bias,3,0.3333333333333333,1494.0,0.0,0,0
+PCA + contributions,multi_freeze,3,1.0,95.99999999999997,0.0,3,3
+PCA + contributions,replay_a_feed,3,1.0,30.0,0.0,0,0
+PCA + contributions,replay_a_feed_jitter,3,1.0,24.00000000000002,0.0,0,0
+PCA + contributions,replay_all_transmitters,3,1.0,54.00000000000002,0.0,3,3
+PCA + contributions,replay_all_transmitters_jitter,3,0.6666666666666666,70.50000000000004,0.0,3,2
+PCA + contributions,replay_cooling_large,3,1.0,15.0,0.0,0,0
+PCA + contributions,replay_cooling_large_jitter,3,1.0,15.0,0.0,1,1
+PCA + contributions,replay_cooling_small,3,1.0,15.0,0.0,0,0
+PCA + contributions,replay_cooling_small_jitter,3,1.0,15.0,0.0,1,1
+PCA + contributions,replay_purge,3,1.0,45.0,0.0,1,1
+PCA + contributions,replay_purge_jitter,3,1.0,63.00000000000004,0.0,2,2
+PCA + contributions,replay_stripper_product,3,1.0,30.0,0.0,3,3
+PCA + contributions,replay_stripper_product_jitter,3,1.0,33.00000000000004,0.0,3,3
+PCA + contributions,stealthy_coordinated_bias,3,1.0,888.0,0.0,0,0
+PCA + RBC,multi_freeze,3,1.0,95.99999999999997,0.0,3,3
+PCA + RBC,replay_a_feed,3,1.0,30.0,0.0,0,0
+PCA + RBC,replay_a_feed_jitter,3,1.0,24.00000000000002,0.0,0,0
+PCA + RBC,replay_all_transmitters,3,1.0,54.00000000000002,0.0,3,3
+PCA + RBC,replay_all_transmitters_jitter,3,0.6666666666666666,70.50000000000004,0.0,3,2
+PCA + RBC,replay_cooling_large,3,1.0,15.0,0.0,0,0
+PCA + RBC,replay_cooling_large_jitter,3,1.0,15.0,0.0,1,1
+PCA + RBC,replay_cooling_small,3,1.0,15.0,0.0,0,0
+PCA + RBC,replay_cooling_small_jitter,3,1.0,15.0,0.0,1,1
+PCA + RBC,replay_purge,3,1.0,45.0,0.0,1,1
+PCA + RBC,replay_purge_jitter,3,1.0,63.00000000000004,0.0,2,2
+PCA + RBC,replay_stripper_product,3,1.0,30.0,0.0,3,3
+PCA + RBC,replay_stripper_product_jitter,3,1.0,33.00000000000004,0.0,3,3
+PCA + RBC,stealthy_coordinated_bias,3,1.0,888.0,0.0,0,0
+Guardian,multi_freeze,3,1.0,18.000000000000043,1.0,3,3
+Guardian,replay_a_feed,3,1.0,5.999999999999979,1.0,0,0
+Guardian,replay_a_feed_jitter,3,1.0,5.999999999999979,0.0,0,0
+Guardian,replay_all_transmitters,3,1.0,5.999999999999979,1.0,3,3
+Guardian,replay_all_transmitters_jitter,3,1.0,9.000000000000021,0.0,3,3
+Guardian,replay_cooling_large,3,1.0,9.000000000000021,1.0,0,0
+Guardian,replay_cooling_large_jitter,3,1.0,9.000000000000021,0.0,1,1
+Guardian,replay_cooling_small,3,1.0,11.999999999999957,1.0,0,0
+Guardian,replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian,replay_purge,3,1.0,5.999999999999979,1.0,1,1
+Guardian,replay_purge_jitter,3,1.0,9.000000000000021,0.0,2,2
+Guardian,replay_stripper_product,3,1.0,18.000000000000043,1.0,3,3
+Guardian,replay_stripper_product_jitter,3,1.0,18.000000000000043,0.0,3,3
+Guardian,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0
+Guardian w/o instrument checks,multi_freeze,3,1.0,18.000000000000043,0.0,3,3
+Guardian w/o instrument checks,replay_a_feed,3,1.0,5.999999999999979,1.0,0,0
+Guardian w/o instrument checks,replay_a_feed_jitter,3,1.0,5.999999999999979,0.0,0,0
+Guardian w/o instrument checks,replay_all_transmitters,3,1.0,5.999999999999979,1.0,3,3
+Guardian w/o instrument checks,replay_all_transmitters_jitter,3,1.0,9.000000000000021,0.0,3,3
+Guardian w/o instrument checks,replay_cooling_large,3,1.0,9.000000000000021,1.0,0,0
+Guardian w/o instrument checks,replay_cooling_large_jitter,3,1.0,9.000000000000021,0.0,1,1
+Guardian w/o instrument checks,replay_cooling_small,3,1.0,11.999999999999957,1.0,0,0
+Guardian w/o instrument checks,replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian w/o instrument checks,replay_purge,3,1.0,5.999999999999979,1.0,1,1
+Guardian w/o instrument checks,replay_purge_jitter,3,1.0,9.000000000000021,0.0,2,2
+Guardian w/o instrument checks,replay_stripper_product,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o instrument checks,replay_stripper_product_jitter,3,1.0,18.000000000000043,0.0,3,3
+Guardian w/o instrument checks,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0
+Guardian w/o setpoint context,multi_freeze,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o setpoint context,replay_a_feed,3,1.0,5.999999999999979,1.0,0,0
+Guardian w/o setpoint context,replay_a_feed_jitter,3,1.0,5.999999999999979,0.0,0,0
+Guardian w/o setpoint context,replay_all_transmitters,3,1.0,5.999999999999979,1.0,3,3
+Guardian w/o setpoint context,replay_all_transmitters_jitter,3,1.0,9.000000000000021,0.0,3,3
+Guardian w/o setpoint context,replay_cooling_large,3,1.0,9.000000000000021,1.0,0,0
+Guardian w/o setpoint context,replay_cooling_large_jitter,3,1.0,9.000000000000021,0.0,1,1
+Guardian w/o setpoint context,replay_cooling_small,3,1.0,11.999999999999957,1.0,0,0
+Guardian w/o setpoint context,replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian w/o setpoint context,replay_purge,3,1.0,5.999999999999979,1.0,1,1
+Guardian w/o setpoint context,replay_purge_jitter,3,1.0,9.000000000000021,0.0,2,2
+Guardian w/o setpoint context,replay_stripper_product,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o setpoint context,replay_stripper_product_jitter,3,1.0,18.000000000000043,0.0,3,3
+Guardian w/o setpoint context,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0
+Guardian w/o dynamics (static bank),multi_freeze,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o dynamics (static bank),replay_a_feed,3,1.0,5.999999999999979,1.0,0,0
+Guardian w/o dynamics (static bank),replay_a_feed_jitter,3,1.0,5.999999999999979,0.0,0,0
+Guardian w/o dynamics (static bank),replay_all_transmitters,3,1.0,5.999999999999979,1.0,3,3
+Guardian w/o dynamics (static bank),replay_all_transmitters_jitter,3,1.0,9.000000000000021,0.0,3,3
+Guardian w/o dynamics (static bank),replay_cooling_large,3,1.0,11.999999999999957,1.0,0,0
+Guardian w/o dynamics (static bank),replay_cooling_large_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian w/o dynamics (static bank),replay_cooling_small,3,1.0,11.999999999999957,1.0,0,0
+Guardian w/o dynamics (static bank),replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian w/o dynamics (static bank),replay_purge,3,1.0,5.999999999999979,1.0,1,1
+Guardian w/o dynamics (static bank),replay_purge_jitter,3,1.0,5.999999999999979,0.0,2,2
+Guardian w/o dynamics (static bank),replay_stripper_product,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o dynamics (static bank),replay_stripper_product_jitter,3,1.0,20.99999999999998,0.0,3,3
+Guardian w/o dynamics (static bank),stealthy_coordinated_bias,3,1.0,71.99999999999996,0.0,0,0
+Guardian w/o integrity layer,multi_freeze,3,1.0,18.000000000000043,0.0,3,3
+Guardian w/o integrity layer,replay_a_feed,3,1.0,5.999999999999979,0.0,0,0
+Guardian w/o integrity layer,replay_a_feed_jitter,3,1.0,5.999999999999979,0.0,0,0
+Guardian w/o integrity layer,replay_all_transmitters,3,1.0,5.999999999999979,0.0,3,3
+Guardian w/o integrity layer,replay_all_transmitters_jitter,3,1.0,9.000000000000021,0.0,3,3
+Guardian w/o integrity layer,replay_cooling_large,3,1.0,9.000000000000021,0.0,0,0
+Guardian w/o integrity layer,replay_cooling_large_jitter,3,1.0,9.000000000000021,0.0,1,1
+Guardian w/o integrity layer,replay_cooling_small,3,1.0,11.999999999999957,0.0,0,0
+Guardian w/o integrity layer,replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,1,1
+Guardian w/o integrity layer,replay_purge,3,1.0,5.999999999999979,0.0,1,1
+Guardian w/o integrity layer,replay_purge_jitter,3,1.0,9.000000000000021,0.0,2,2
+Guardian w/o integrity layer,replay_stripper_product,3,1.0,20.99999999999998,0.0,3,3
+Guardian w/o integrity layer,replay_stripper_product_jitter,3,1.0,18.000000000000043,0.0,3,3
+Guardian w/o integrity layer,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0

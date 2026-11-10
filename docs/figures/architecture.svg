@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a939c"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="440" rx="10" fill="#23282d"/>
+
+  <!-- Plant -->
+  <rect x="30" y="70" width="230" height="300" rx="8" fill="#2c3238" stroke="#454d56"/>
+  <text x="50" y="104" fill="#e3e6e8" font-size="17" font-weight="600">Plant</text>
+  <text x="50" y="132" fill="#b0b7be" font-size="13">Tennessee Eastman process</text>
+  <text x="50" y="152" fill="#b0b7be" font-size="13">(closed-loop simulation)</text>
+  <rect x="50" y="172" width="190" height="52" rx="5" fill="#363d44" stroke="#454d56"/>
+  <text x="64" y="194" fill="#e3e6e8" font-size="13">22 transmitters</text>
+  <text x="64" y="212" fill="#8a939c" font-size="12">flows, levels, P, T</text>
+  <rect x="50" y="236" width="190" height="52" rx="5" fill="#363d44" stroke="#454d56"/>
+  <text x="64" y="258" fill="#e3e6e8" font-size="13">DCS control loops</text>
+  <text x="64" y="276" fill="#8a939c" font-size="12">valves, setpoints</text>
+  <text x="50" y="316" fill="#8a939c" font-size="12">Trainer injects faults,</text>
+  <text x="50" y="334" fill="#8a939c" font-size="12">disturbances and attacks</text>
+  <text x="50" y="352" fill="#8a939c" font-size="12">(simulation only)</text>
+
+  <!-- Link -->
+  <line x1="262" y1="220" x2="338" y2="220" stroke="#8a939c" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="300" y="196" fill="#b0b7be" font-size="12" text-anchor="middle">OPC UA</text>
+  <text x="300" y="246" fill="#8a939c" font-size="11" text-anchor="middle">encrypted,</text>
+  <text x="300" y="261" fill="#8a939c" font-size="11" text-anchor="middle">read-only</text>
+
+  <!-- Guardian -->
+  <rect x="340" y="30" width="430" height="380" rx="8" fill="#2c3238" stroke="#9d7be6" stroke-width="1.6"/>
+  <text x="362" y="62" fill="#e3e6e8" font-size="17" font-weight="600">Guardian</text>
+  <text x="458" y="62" fill="#8a939c" font-size="12">runs every 3 plant minutes</text>
+  <g font-size="13">
+    <rect x="362" y="80" width="386" height="42" rx="5" fill="#363d44"/>
+    <text x="378" y="106" fill="#e3e6e8">Input validation</text>
+    <text x="732" y="106" fill="#8a939c" font-size="12" text-anchor="end">NaN, span, timestamps</text>
+
+    <rect x="362" y="130" width="386" height="42" rx="5" fill="#363d44"/>
+    <text x="378" y="156" fill="#e3e6e8">Integrity checks</text>
+    <text x="732" y="156" fill="#8a939c" font-size="12" text-anchor="end">replay, multi-freeze</text>
+
+    <rect x="362" y="180" width="386" height="42" rx="5" fill="#363d44"/>
+    <text x="378" y="206" fill="#e3e6e8">Instrument checks</text>
+    <text x="732" y="206" fill="#8a939c" font-size="12" text-anchor="end">flatline, noise</text>
+
+    <rect x="362" y="230" width="386" height="42" rx="5" fill="#3a3550" stroke="#9d7be6"/>
+    <text x="378" y="256" fill="#e3e6e8">Virtual sensor bank</text>
+    <text x="732" y="256" fill="#c9b6f5" font-size="12" text-anchor="end">31 ridge models</text>
+
+    <rect x="362" y="280" width="386" height="42" rx="5" fill="#363d44"/>
+    <text x="378" y="306" fill="#e3e6e8">Reconstruction test</text>
+    <text x="732" y="306" fill="#8a939c" font-size="12" text-anchor="end">+ setpoint context from the DCS</text>
+
+    <rect x="362" y="340" width="386" height="50" rx="5" fill="#23282d" stroke="#454d56"/>
+    <text x="378" y="361" fill="#e3e6e8" font-weight="600">Verdict</text>
+    <text x="378" y="380" fill="#b0b7be" font-size="11.5">which transmitter failed, or a process fault, regime change or attack</text>
+  </g>
+
+  <!-- Outputs -->
+  <line x1="772" y1="220" x2="818" y2="220" stroke="#8a939c" stroke-width="1.6" marker-end="url(#arr)"/>
+  <g font-size="13">
+    <rect x="820" y="70" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
+    <text x="838" y="96" fill="#e3e6e8">Alarms</text>
+    <text x="838" y="116" fill="#8a939c" font-size="12">ISA-18.2 states, priorities</text>
+    <rect x="820" y="144" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
+    <text x="838" y="170" fill="#e3e6e8">Protected soft sensor</text>
+    <text x="838" y="190" fill="#8a939c" font-size="12">trusted, repaired or untrusted</text>
+    <rect x="820" y="218" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
+    <text x="838" y="244" fill="#e3e6e8">Audit log</text>
+    <text x="838" y="264" fill="#8a939c" font-size="12">HMAC hash chain, tamper-evident</text>
+    <rect x="820" y="292" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
+    <text x="838" y="318" fill="#e3e6e8">Live control room</text>
+    <text x="838" y="338" fill="#8a939c" font-size="12">ISA-101 style HMI, local only</text>
+  </g>
+  <text x="820" y="390" fill="#8a939c" font-size="12">Never writes to the control system.</text>
+</svg>

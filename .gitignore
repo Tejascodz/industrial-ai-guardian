@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+data/
+results/*.parquet
+sim/te_cli
+models/
+results/audit_demo.jsonl
+results/audit_live*.jsonl
+.venv/
+.env
+*.pem
+*.der
+*.key

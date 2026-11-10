@@ -1,0 +1,14 @@
+# Pinned versions the benchmark was run with (python 3.13).
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.1
+scipy==1.18.1
+pyarrow==26.0.1
+joblib==1.6.0
+matplotlib==3.11.2
+asyncua==2.1.0
+cryptography==50.0.1
+fastapi==0.162.2
+uvicorn==0.54.0
+websockets==17.4
+pydantic==2.13.5
