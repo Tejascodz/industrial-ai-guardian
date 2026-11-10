@@ -1,8 +1,12 @@
 # Pinned versions the benchmark was run with (python 3.13).
-numpy==2.5.3
+# numpy and scipy dropped python 3.11 after 2.4 / 1.17, so 3.11 gets the last
+# releases that support it.
+numpy==2.5.3; python_version >= "3.12"
+numpy==2.4.6; python_version < "3.12"
 pandas==3.0.5
 scikit-learn==1.9.1
-scipy==1.18.1
+scipy==1.18.1; python_version >= "3.12"
+scipy==1.17.1; python_version < "3.12"
 pyarrow==26.0.1
 joblib==1.6.0
 matplotlib==3.11.2
