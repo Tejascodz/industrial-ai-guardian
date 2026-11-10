@@ -1,12 +1,12 @@
 subset,samples,rmse_raw,rmse_protected
-"Normal operation (all runs, before any event)",59400,0.010317805133220772,
-"Sensor faults, after onset: raw soft sensor",91214,0.17468458987222638,
-"Sensor faults, after onset: Guardian-protected",91214,0.16407446300813244,
-"Sensor faults, after onset: oracle (true transmitter values)",91214,0.16100219613966715,
-"All runs, samples with status OK",79177,0.010705588465847288,0.010705588465847288
-"All runs, samples with status RECONSTRUCTED",44400,0.09418385276999294,0.01847342897294511
-"All runs, samples with status UNTRUSTED",75877,0.2003752885962156,0.19982665451203077
-Sensor faults on transmitters outside control loops: raw / protected,39960,0.08893843298364029,0.013479439262004662
-Sensor faults on transmitters outside control loops: oracle,39960,0.010465061456581326,
-Sensor faults on transmitters inside a control loop: raw / protected,51254,0.2194045352238195,0.21855706119130353
-Sensor faults on transmitters inside a control loop: oracle,51254,0.21458352597174557,
+"Normal operation (all runs, before any event)",59400,0.010344986480864344,
+"Sensor faults, after onset: raw soft sensor",90767,0.23941287774187656,
+"Sensor faults, after onset: Guardian-protected",90767,0.20327402383701265,
+"Sensor faults, after onset: oracle (true transmitter values)",90767,0.18424938681725248,
+"All runs, samples with status OK",76277,0.010621521043951787,0.010621521043951787
+"All runs, samples with status RECONSTRUCTED",46208,0.09220462113098252,0.01408301937536163
+"All runs, samples with status UNTRUSTED",76522,0.26629925824201023,0.23666275200134484
+Sensor faults on transmitters outside control loops: raw / protected,39960,0.08818752666689407,0.012216563446223684
+Sensor faults on transmitters outside control loops: oracle,39960,0.01025461495821634,
+Sensor faults on transmitters inside a control loop: raw / protected,50807,0.3102953303952562,0.27148043253565324
+Sensor faults on transmitters inside a control loop: oracle,50807,0.24610018299333467,

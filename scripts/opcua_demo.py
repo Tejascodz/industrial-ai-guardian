@@ -14,6 +14,7 @@ OPC UA server quickly (one sample per tick) and prints alarms as they happen.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import asyncio
 import logging
 import sys
@@ -48,13 +49,17 @@ async def main(scenario: str, split: str, start_h: float, end_h: float) -> None:
     run = run[run.time <= end_h]
     print(f"scenario: {meta[scenario]['description']}")
 
-    pki = Path(tempfile.mkdtemp(prefix="guardian_pki_"))
+    # Demo certificates and private keys live only for this run.
+    with tempfile.TemporaryDirectory(prefix="guardian_pki_") as tmp:
+        await _serve(Path(tmp), g, limits, key, run, start_h)
+
+
+async def _serve(pki: Path, g, limits, key: bytes, run: pd.DataFrame, start_h: float) -> None:
     server_id = make_identity(pki, "plant", server=True)
     client_id = make_identity(pki, "guardian", server=False)
     tags = MONITORED + SP_TAGS
     endpoint = "opc.tcp://127.0.0.1:48410/guardian/"
     server = PlantServer(server_id, [client_id.cert], tags, endpoint)
-    await server.start()
 
     audit_path = ROOT / "results" / "audit_demo.jsonl"
     audit_path.unlink(missing_ok=True)
@@ -63,6 +68,7 @@ async def main(scenario: str, split: str, start_h: float, end_h: float) -> None:
     history: list[dict] = []
     last = None
     try:
+        await server.start()  # inside try: a failed start still stops the server
         async with SecureReadOnlyClient(endpoint, client_id, server_id.cert, tags) as client:
             for _, row in run.iterrows():
                 await server.publish(row)  # the plant updates its tags
@@ -84,7 +90,8 @@ async def main(scenario: str, split: str, start_h: float, end_h: float) -> None:
                           f"{', '.join(event['hot_channels'][:4])}")
                     last = state
     finally:
-        await server.stop()
+        with contextlib.suppress(Exception):  # a server that never started has nothing to stop
+            await server.stop()
     ok, bad = verify(audit_path, key)
     print(f"audit log: {audit_path.relative_to(ROOT)} ({audit.seq} records, chain {'verified' if ok else f'BROKEN at {bad}'})")
 

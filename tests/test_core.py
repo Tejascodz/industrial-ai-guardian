@@ -60,3 +60,30 @@ def test_closed_loop_sensor_bias_moves_the_real_process():
     assert abs(late.true_9.mean() - 121.9) < 0.1
     early = df[df.time < 1.0]
     np.testing.assert_allclose(early.xmeas_9, early.true_9)
+
+
+def test_scoring_needs_an_alarm_that_starts_after_the_event():
+    from guardian.evaluate import Prepared, score
+    from guardian.methods import Analysis, Method
+
+    class Stub(Method):
+        def diagnose(self, a, i, limits):
+            return ("sensor_fault", None)
+
+    t = 0.05 * np.arange(200)
+    meta = {"event_class": "sensor_fault", "event_t": 5.0, "sensor_fault": None, "idv": None}
+
+    def scored(hot):
+        a = Analysis(S=hot.astype(float)[:, None], channels=["x"])
+        p = Prepared("r", meta, a, t, t < 5.0)
+        return score(Stub(), [p], np.array([0.5])).iloc[0]
+
+    standing = np.zeros(200, bool)
+    standing[80:150] = True  # false alarm from t=4.0 h, still on at the event
+    row = scored(standing)
+    assert not row.detected and row.false_alarms == 1
+
+    late = standing.copy()
+    late[160:] = True  # a new alarm after the event is the detection
+    row = scored(late)
+    assert row.detected and abs(row.delay_h - (162 * 0.05 - 5.0)) < 1e-9

@@ -76,7 +76,17 @@ def save(g: Guardian, out_dir: str | Path, limits: np.ndarray | None = None,
     return out
 
 
-def load(in_dir: str | Path, key: bytes | None = None) -> tuple[Guardian, np.ndarray | None, list | None]:
+def load(in_dir: str | Path, key: bytes | None = None,
+         allow_unsigned: bool = False) -> tuple[Guardian, np.ndarray | None, list | None]:
+    """Load a saved model, refusing anything that is not signed with ``key``.
+
+    Plain hashes only catch accidents: whoever can replace a file can also
+    rewrite its hash. ``allow_unsigned=True`` skips the signature for local
+    development and tests and must not be used for a model a plant runs on.
+    """
+    if key is None and not allow_unsigned:
+        raise ArtifactIntegrityError("a signing key is required to load a model "
+                                     "(allow_unsigned=True is for development only)")
     d = Path(in_dir)
     manifest = json.loads((d / "manifest.json").read_text())
     files = manifest.get("files", {})
@@ -85,7 +95,7 @@ def load(in_dir: str | Path, key: bytes | None = None) -> tuple[Guardian, np.nda
     for name, digest in files.items():
         if not hmac.compare_digest(_sha256(d / name), digest):
             raise ArtifactIntegrityError(f"{name} does not match its manifest hash")
-    if key is not None:
+    if key is not None:  # a key, once given, is always enforced
         sig = manifest.get("hmac_sha256", "")
         if not hmac.compare_digest(sig, _sign(manifest, key)):
             raise ArtifactIntegrityError("manifest signature is missing or invalid")

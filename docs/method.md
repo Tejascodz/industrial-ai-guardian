@@ -16,9 +16,14 @@ Every 3-minute sample passes through the stages below. The code is in
 - instrument span
 - strictly increasing timestamps with no gaps
 
-Broken data (NaN, bad time) raises an integrity alarm, and invalid samples
-are masked. A value outside the span is reported but not treated as an
-attack, because a real upset can saturate an instrument.
+Broken data (NaN, bad time) raises an integrity alarm. Invalid values are
+repaired one transmitter at a time, so one bad transmitter never hides the
+others: a missing value holds that tag's last valid reading (past data only,
+nothing is filled backwards), and a value outside the span is clipped to the
+span limit, the way a saturated transmitter reads. The deviation stays
+visible, so an off-scale transmitter still raises an alarm. An out-of-span
+value is not treated as an attack, because a real upset can saturate an
+instrument.
 
 ## 2. Virtual sensor bank (analytical redundancy)
 
@@ -99,7 +104,7 @@ The soft sensor estimates product component E from the 31 live readings.
   - IDV(17) and IDV(18) appear only in single cooling-water temperatures.
   - IDV(14) appears in TI-121 and TIC-109.
 
-  All the process faults blamed on a transmitter (27 % of detected process
+  All the process faults blamed on a transmitter (24 % of detected process
   faults) come from these four. Separating them needs one more measurement,
   such as feed or cooling-water inlet temperature. The isolability analysis
   doubles as an instrumentation recommendation.

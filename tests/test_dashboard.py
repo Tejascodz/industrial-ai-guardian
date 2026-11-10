@@ -165,3 +165,24 @@ def test_server_keeps_running_when_the_plant_fails(tmp_path):
             assert msg["ok"] is False and "paused" in msg["message"]
             assert msg["control"]["running"] is False
         assert c.get("/").status_code == 200
+
+
+def test_ground_truth_stays_on_the_server_until_revealed(client):
+    truth = [{"kind": "sensor_fault", "label": "TT bias", "t": 4.0, "active": True},
+             {"kind": "disturbance", "label": "IDV(1)", "t": 4.5, "active": True, "idv": 1}]
+    point = {"t": 5.0, "meas": {"xmeas_9": 120.4}, "true": {"xmeas_9": 120.4}}
+    client.session.state = {**client.session.state, "truth": truth, "point": point}
+    with client.websocket_connect("/ws?token=secret-token", headers=ORIGIN) as ws:
+        hello = _hello(ws)
+        assert hello["control"]["reveal"] is False
+        assert "true" not in hello["state"]["point"]
+        assert [e["kind"] for e in hello["state"]["truth"]] == ["disturbance"]
+
+        ws.send_json({"cmd": "reveal", "on": True, "req": 2})
+        snap = ws.receive_json()
+        while snap["type"] != "snapshot":
+            snap = ws.receive_json()
+        assert snap["state"]["point"]["true"] == {"xmeas_9": 120.4}
+        assert len(snap["state"]["truth"]) == 2
+        assert _result(ws)["control"]["reveal"] is True
+    assert any(r["event"].get("action") == "ground_truth_revealed" for r in client.session.audit.tail(10))

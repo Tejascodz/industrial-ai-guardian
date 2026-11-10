@@ -11,7 +11,9 @@ real ones. Every sample is checked against
                  not treated as an integrity failure
   * time         strictly increasing timestamps, no gaps or duplicates
 
-Invalid samples are reported and masked; they never reach the models raw.
+Invalid values are reported and repaired per sensor, using past data only;
+they never reach the models raw, and one bad transmitter never hides the
+readings of the others.
 """
 
 from __future__ import annotations
@@ -108,19 +110,38 @@ def validate(df: pd.DataFrame, tags: list[str] = MONITORED,
     return ValidationReport(bad, pipeline_bad, issues)
 
 
-def sanitize(df: pd.DataFrame, report: ValidationReport, tags: list[str] = MONITORED) -> pd.DataFrame:
-    """Hold the last valid value for invalid samples so models get finite input.
+def sanitize(df: pd.DataFrame, report: ValidationReport, tags: list[str] = MONITORED,
+             fallback: dict[str, float] | None = None) -> pd.DataFrame:
+    """Repair invalid values so the models get finite input, one sensor at a time.
 
-    The samples stay flagged in the report; holding values only keeps the
-    numerical pipeline running while the alarm is raised.
+    * A value outside the instrument span is clipped to the span limit, the way
+      a saturated transmitter reads. The deviation stays visible to the models,
+      so a sensor driven off scale still raises an alarm.
+    * A missing or non-finite value holds that sensor's last valid reading.
+      Only past data is used: nothing is filled backwards from the future.
+    * A sensor with no valid reading yet takes ``fallback[tag]`` (the training
+      mean when called from Guardian), else the middle of its span.
+    * Timestamp problems leave the values alone; they are an integrity alarm
+      (``report.pipeline_bad``), not a reason to discard good measurements.
+
+    The samples stay flagged in the report, so repair never hides them.
     """
     out = df.copy()
     if report.ok:
         return out
-    vals = out[tags].astype(float)
-    vals[report.bad] = np.nan
     for t in tags:
+        v = out[t].astype(float).to_numpy().copy()
         lo, hi = SPANS.get(t, (-np.inf, np.inf))
-        vals.loc[(vals[t] < lo) | (vals[t] > hi), t] = np.nan
-    out[tags] = vals.ffill().bfill().fillna(0.0)
+        v[~np.isfinite(v)] = np.nan
+        v = np.clip(v, lo, hi)  # NaN stays NaN
+        col = pd.Series(v, index=out.index).ffill()
+        if col.isna().any():
+            if fallback is not None and t in fallback:
+                first = float(fallback[t])
+            elif np.isfinite(lo) and np.isfinite(hi):
+                first = (lo + hi) / 2.0
+            else:
+                first = 0.0
+            col = col.fillna(first)
+        out[t] = col
     return out

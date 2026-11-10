@@ -48,15 +48,18 @@ permissions both forbid writes.
 | T3 | Monitor used to write to the plant (E) | The client has no write method, and the server's read-only permission ruleset refuses writes even from a trusted client | `test_server_refuses_writes_even_from_a_trusted_client` |
 | T4 | Replayed sensor data hides an attack (T) | Exact-repetition detector on every transmitter (`P:` channels) leads to an integrity alarm | `results/attack_summary.csv`, `test_replay_detector_flags_repeated_windows_only` |
 | T5 | Several transmitters frozen (lost link or DoS) (D) | Simultaneous-flatline rule on 3 or more transmitters leads to an integrity alarm | `results/attack_summary.csv` |
-| T6 | Malformed data (NaN, impossible values, broken timestamps) (T, D) | `guardian/validation.py`: schema, finiteness, span and time checks. Bad samples are masked; pipeline failures raise an integrity alarm | `tests/test_security.py` (validation tests) |
-| T7 | Malicious model file (T, E) | No pickle. Arrays load with `allow_pickle=False`; SHA-256 manifest is HMAC-signed and checked before anything is read | `test_artifact_tampering_is_refused`, `test_artifact_signature_required_when_key_given` |
-| T8 | Rewriting alarm history (R) | HMAC-SHA256 hash-chained audit log. Any edit, deletion or reordering breaks verification | `test_audit_log_detects_tampering` |
+| T6 | Malformed data (NaN, impossible values, broken timestamps) (T, D) | `guardian/validation.py`: schema, finiteness, span and time checks. Bad values are repaired per transmitter from past data only (hold last value; clip to span), so one bad tag never hides the others; pipeline failures raise an integrity alarm | `tests/test_security.py` (validation and sanitize tests) |
+| T7 | Malicious model file (T, E) | No pickle. Arrays load with `allow_pickle=False`; SHA-256 manifest is HMAC-signed and checked before anything is read. Loading requires the key; unsigned loading needs an explicit development-only flag | `test_artifact_tampering_is_refused`, `test_artifact_load_needs_a_key_unless_explicitly_unsigned` |
+| T8 | Rewriting alarm history (R) | HMAC-SHA256 hash-chained audit log. Any edit, deletion or reordering breaks verification. Writes are serialised by a lock (the plant clock and the web server both write); verification streams the file and reports malformed lines instead of crashing | `test_audit_log_detects_tampering`, `test_audit_log_stays_consistent_under_concurrent_writers` |
 | T9 | Vulnerable dependencies (T, E) | Pinned versions in `requirements.txt`. `pip-audit` reported no known vulnerabilities at release | see "Scans" below |
 | T10 | Code-level flaws (E) | `bandit` static analysis. The only subprocess call runs the bundled simulator with fixed arguments and no shell | see "Scans" below |
 | T11 | Alarm flooding erodes operator trust (D) | Limits calibrated to a false-alarm budget; 3-sample persistence; dashboard debounces diagnosis changes | `results/benchmark_summary.csv` |
 | T12 | Another local user or web page drives the dashboard (S, E) | Binds to 127.0.0.1. Random access token, compared in constant time. WebSocket `Origin` check against cross-site WebSocket hijacking | `tests/test_dashboard.py` |
 | T13 | Malformed or abusive commands (T, D) | Strict schema (pydantic, no extra fields, ranges), plant-side limit checks, 4 KB message cap, per-connection rate limit | `tests/test_dashboard.py` |
 | T14 | Script injection into the operator's browser (T, E) | Content-Security-Policy `script-src 'self'`, no inline script, no third-party CDN (uPlot and fonts are vendored), server strings inserted with `textContent` only, `frame-ancestors 'none'` | `tests/test_dashboard.py::test_page_has_strict_security_headers` |
+| T15 | Ground truth leaks into a blind demo or evaluation (I) | True sensor values and injected faults or attacks stay on the server until the trainer reveals them; the reveal is audited | `test_ground_truth_stays_on_the_server_until_revealed` |
+| T16 | Malformed input to the simulator (T, D) | `te_cli` parses every number strictly (whole token, finite, within engineering bounds) in both batch and live mode | `test_simulator_refuses_non_finite_and_out_of_range_numbers` |
+| T17 | Secrets committed to the repository (I) | `.gitignore` covers keys, certificates and `.env` files; `detect-secrets` runs on every tracked file in CI | CI |
 
 ### Mapping to IEC 62443-3-3 foundational requirements
 
@@ -87,15 +90,15 @@ the thresholds calibrated on normal data (`results/attack_summary.csv`).
 
 | | Limit checks | PCA + RBC | Guardian |
 |---|---|---|---|
-| Attacks detected | 88 % | 98 % | **100 %** |
+| Attacks detected | 90 % | 95 % | **100 %** |
 | Recognised as an integrity attack | 0 % (no such class) | 0 % (no such class) | **50 %** |
-| Plant trips warned in advance | 17 / 20 | 19 / 20 | **20 / 20** |
+| Plant trips warned in advance | 17 / 19 | 17 / 19 | **19 / 19** |
 
 | Attack type | Guardian: median delay | Recognised as attack |
 |---|---|---|
-| Replay + valve attack (5 variants) | 6 to 18 min | 100 % |
+| Replay + valve attack (5 variants) | 9 to 18 min | 100 % |
 | Replay of all 22 transmitters | 6 min | 100 % |
-| Same replays with attacker noise | 6 to 18 min | **0 %**: reported as a process or sensor fault |
+| Same replays with attacker noise | 6 to 21 min | **0 %**: reported as a process or sensor fault |
 | Multi-freeze | 18 min | 100 % |
 | Stealthy coordinated bias | 48 min | **0 %**: reported as a sensor or process fault |
 
@@ -117,7 +120,8 @@ What this means:
 |---|---|
 | `bandit -r guardian scripts dashboard` | 0 issues. The low-severity subprocess notes are reviewed and annotated: fixed binary, no shell, typed arguments |
 | `pip-audit -r requirements.txt` | No known vulnerabilities (at release time) |
-| `pytest` | All security tests pass (validation, audit log, artifacts, replay, OPC UA) |
+| `detect-secrets` (every tracked file) | No secrets found |
+| `pytest` | All security tests pass (validation, audit log, artifacts, replay, OPC UA, dashboard) |
 
 ## Not covered: residual risks
 
@@ -130,10 +134,13 @@ What this means:
   looks exactly like a faulty one. Guardian reports it as a transmitter fault,
   which is still the right field action: check that transmitter.
 - **Key management.** Keys come from an environment variable and the demo
-  certificates are self-signed. A plant would use its certificate authority
+  certificates are self-signed (they live in a temporary folder that is
+  deleted when the demo ends). A plant would use its certificate authority
   or the OPC UA Global Discovery Server, a hardware or OS secret store, and
   key rotation.
-- **The host itself.** Operating system hardening, patching, account
+- **Audit log size.** The log grows without rotation. A plant would ship it
+  to write-once storage or a SIEM and rotate it there.
+- **The host itself. Operating system hardening, patching, account
   management and network segmentation of the Guardian host are site
   responsibilities and outside this repository.
 - **Compressed historian data.** The replay detector needs raw samples.

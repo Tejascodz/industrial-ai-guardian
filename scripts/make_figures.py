@@ -116,8 +116,8 @@ def protected_softsensor(g, lim, ss, test, tm, scenario="test_sf_xmeas_18_drift_
     ax[1].set_ylabel("Product E [mol%]")
     ax[1].set_xlabel("Time [h]")
     _mark(ax, t_ev, t[i], f" alarm +{(t[i] - t_ev) * 60:.0f} min: {cls.replace('_', ' ')} on {tag}")
-    ax[0].legend(loc="center left", fontsize=8.5)
-    ax[1].legend(loc="lower left", fontsize=8.5)
+    ax[0].legend(loc="lower left", fontsize=8.5)
+    ax[1].legend(loc="upper left", fontsize=8.5)
     fig.tight_layout()
     fig.savefig(FIG / "softsensor_protection.png", dpi=160)
     plt.close(fig)
@@ -145,7 +145,8 @@ def benchmark_bars() -> None:
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
     ax.grid(axis="x", visible=False)
     fa = sm["false_alarms_per_day"]
-    ax.set_title(f"Test set, same false-alarm budget ({fa.min():.1f}-{fa.max():.1f} false alarms/day on test)",
+    span = f"{fa.min():.2f}" if round(fa.min(), 2) == round(fa.max(), 2) else f"{fa.min():.2f} to {fa.max():.2f}"
+    ax.set_title(f"Test set, same false-alarm budget ({span} false alarms/day on test)",
                  loc="left", fontsize=11, fontweight="bold")
     ax.legend(ncol=4, fontsize=8.5, loc="upper center", bbox_to_anchor=(0.5, -0.18))
     fig.tight_layout()

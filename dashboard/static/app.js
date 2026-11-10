@@ -107,6 +107,8 @@ function setLink(text, state) {
 
 function setControl(c) {
   app.control = c;
+  app.reveal = Boolean(c.reveal);
+  $("reveal").checked = app.reveal;
   const sel = $("speed");
   if (!sel.options.length) {
     for (const v of c.speeds) sel.append(el("option", { value: v }, `${Math.round(v * 180)}× real time`));
@@ -591,7 +593,8 @@ function buildTrainer() {
   app.spInfo = spInfo;
   $("fSp").addEventListener("submit", (e) => { e.preventDefault(); send({ cmd: "setpoint", name: sp.value, value: Number($("spVal").value) }); });
 
-  $("reveal").addEventListener("change", (e) => { app.reveal = e.target.checked; if (app.state) render(app.state); });
+  // The server decides: until it agrees to reveal, it does not send ground truth at all.
+  $("reveal").addEventListener("change", (e) => send({ cmd: "reveal", on: e.target.checked }));
   $("fPlant").addEventListener("submit", (e) => {
     e.preventDefault();
     const seed = Number($("seed").value);

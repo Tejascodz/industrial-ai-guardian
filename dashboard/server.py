@@ -31,7 +31,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
-from guardian.audit import AuditLog, verify
+from guardian.audit import AuditLog
 
 from . import plant
 from .engine import CommandError, LiveSession
@@ -105,8 +105,13 @@ class AuditCmd(_Cmd):
     cmd: Literal["audit"]
 
 
+class RevealCmd(_Cmd):
+    cmd: Literal["reveal"]
+    on: bool
+
+
 Command = Annotated[Union[Run, Speed, Reset, SetpointCmd, FaultCmd, ClearFaults, DisturbanceCmd,
-                          AttackCmd, StopAttacks, Ack, AuditCmd], Field(discriminator="cmd")]
+                          AttackCmd, StopAttacks, Ack, AuditCmd, RevealCmd], Field(discriminator="cmd")]
 COMMAND = TypeAdapter(Command)
 
 
@@ -137,6 +142,32 @@ class Hub:
         self.clients: set[WebSocket] = set()
         self.running = True
         self.speed = 1.0
+        # Ground truth (true sensor values, what was injected) never leaves the
+        # server until the trainer reveals it, so a blind demo stays blind even
+        # to someone reading the WebSocket traffic.
+        self.reveal = False
+
+    # ----- what clients may see -------------------------------------------------
+    def view_point(self, p: dict | None) -> dict | None:
+        if p is None or self.reveal:
+            return p
+        return {k: v for k, v in p.items() if k != "true"}
+
+    def view_state(self, state: dict | None) -> dict | None:
+        if state is None:
+            return None
+        out = dict(state)
+        out["point"] = self.view_point(state.get("point"))
+        if not self.reveal:
+            # Disturbances stay listed: the trainer needs them to stop one, and a
+            # process disturbance is not something Guardian is meant to name.
+            out["truth"] = [e for e in state.get("truth") or [] if e.get("kind") == "disturbance"]
+        return out
+
+    def view_snapshot(self) -> dict:
+        snap = self.session.snapshot()
+        return {"series": [self.view_point(p) for p in snap["series"]],
+                "state": self.view_state(snap["state"])}
 
     async def loop(self) -> None:
         while True:
@@ -144,7 +175,7 @@ class Hub:
             if self.running and not self.session.trip:
                 try:
                     state = await asyncio.to_thread(self.session.tick)
-                    await self.broadcast({"type": "tick", "state": state})
+                    await self.broadcast({"type": "tick", "state": self.view_state(state)})
                 except Exception as e:  # keep serving: pause and tell the operator
                     self.running = False
                     await self.broadcast({"type": "result", "ok": False, "control": self.control(),
@@ -160,7 +191,7 @@ class Hub:
                 self.clients.discard(ws)
 
     def control(self) -> dict:
-        return {"running": self.running, "speed": self.speed, "speeds": SPEEDS}
+        return {"running": self.running, "speed": self.speed, "speeds": SPEEDS, "reveal": self.reveal}
 
     async def handle(self, c) -> str:
         s = self.session
@@ -175,7 +206,7 @@ class Hub:
             return f"Speed set to {int(c.value * 180)}× real time"
         if isinstance(c, Reset):
             await asyncio.to_thread(s.start, c.seed)
-            await self.broadcast({"type": "snapshot", **s.snapshot(), "control": self.control()})
+            await self.broadcast({"type": "snapshot", **self.view_snapshot(), "control": self.control()})
             return f"Plant restarted with seed {c.seed}"
         if isinstance(c, SetpointCmd):
             await asyncio.to_thread(s.set_setpoint, c.name, c.value)
@@ -195,16 +226,20 @@ class Hub:
         if isinstance(c, StopAttacks):
             await asyncio.to_thread(s.stop_attacks)
             return "Attacks stopped"
+        if isinstance(c, RevealCmd):
+            if c.on != self.reveal:
+                self.reveal = c.on
+                s.audit.append({"action": "ground_truth_" + ("revealed" if c.on else "hidden")})
+                await self.broadcast({"type": "snapshot", **self.view_snapshot(), "control": self.control()})
+            return "Ground truth shown" if c.on else "Ground truth hidden"
         if isinstance(c, Ack):
             await asyncio.to_thread(s.acknowledge, c.id)
-            await self.broadcast({"type": "tick", "state": s.state})
+            await self.broadcast({"type": "tick", "state": self.view_state(s.state)})
             return "Acknowledged"
         raise CommandError("unsupported command")
 
     def audit_view(self) -> dict:
-        ok, bad = verify(self.audit_path, self.key)
-        lines = self.audit_path.read_text().splitlines()[-200:]
-        records = [json.loads(x) for x in lines]
+        ok, bad, records = self.session.audit.check(200)
         return {"ok": ok, "firstBad": bad, "records": records[::-1], "path": str(self.audit_path.name)}
 
 
@@ -252,7 +287,7 @@ def create_app(session: LiveSession, token: str, audit_path: Path, key: bytes,
             return
         await ws.accept()
         hub.clients.add(ws)
-        await ws.send_text(dumps({"type": "hello", "meta": plant.meta(), **session.snapshot(),
+        await ws.send_text(dumps({"type": "hello", "meta": plant.meta(), **hub.view_snapshot(),
                                   "control": hub.control()}))
         bucket, last = 10.0, time.monotonic()
         try:

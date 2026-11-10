@@ -29,3 +29,7 @@ jobs:
         run: bandit -q -r guardian scripts dashboard
       - name: Known vulnerabilities in pinned dependencies
         run: pip-audit -r requirements.txt
+      - name: Scan tracked files for leaked keys and tokens
+        run: |
+          pip install "detect-secrets~=1.5.0"
+          git ls-files -z | xargs -0 detect-secrets-hook

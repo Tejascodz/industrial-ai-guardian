@@ -225,14 +225,16 @@ def all_splits() -> dict[str, list[Scenario]]:
     return {
         "train": [normal_history(1000 + i) for i in range(30)],
         "val": make_split("val", 20000, n_normal=12, sensor_reps=1, process_reps=2, regime_reps=1),
-        "test": make_split("test", 50000, n_normal=24, sensor_reps=2, process_reps=4, regime_reps=3),
+        # Seed bases 50000 (test) and 80000 (test_attack) are retired: that split
+        # was seen during development (see docs/benchmark.md).
+        "test": make_split("test", 60000, n_normal=24, sensor_reps=2, process_reps=4, regime_reps=3),
     }
 
 
 def attack_splits() -> dict[str, list[Scenario]]:
     return {
         "val_attack": attack_split("val", 70000, reps=1),
-        "test_attack": attack_split("test", 80000, reps=3),
+        "test_attack": attack_split("test", 90000, reps=3),
     }
 
 

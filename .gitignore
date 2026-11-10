@@ -13,3 +13,6 @@ results/audit_live*.jsonl
 *.pem
 *.der
 *.key
+.env.*
+*.p12
+*.pfx

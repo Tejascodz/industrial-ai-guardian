@@ -47,15 +47,16 @@ the plant.
 
 ## Results
 
-288 test runs of a closed-loop Tennessee Eastman plant, with seeds unseen
-during development. All methods run at the same false-alarm budget.
+288 test runs of a closed-loop Tennessee Eastman plant. The test set was
+generated with fresh seeds after every design choice was frozen, and was not
+used during development. All methods run at the same false-alarm budget.
 
 | Method | False alarms / day | Events detected | Median delay | Correct class | Faulty transmitter named | Plant trips warned |
 |---|---|---|---|---|---|---|
-| Limit checks (per-tag DCS alarms) | 0.30 | 50 % | 1.45 h | 53 % | 34 % | 16 / 20 |
-| PCA, T² / SPE + contribution plots | 0.40 | 57 % | 1.45 h | 35 % | 27 % | 17 / 20 |
-| PCA + reconstruction-based contributions | 0.40 | 57 % | 1.45 h | 42 % | 29 % | 17 / 20 |
-| **Guardian** | **0.35** | **94 %** | **0.30 h** | **79 %** | **77 %** | **20 / 20** |
+| Limit checks (per-tag DCS alarms) | 0.26 | 52 % | 1.60 h | 48 % | 33 % | 16 / 20 |
+| PCA, T² / SPE + contribution plots | 0.27 | 55 % | 1.60 h | 39 % | 31 % | 16 / 20 |
+| PCA + reconstruction-based contributions | 0.27 | 55 % | 1.60 h | 45 % | 31 % | 16 / 20 |
+| **Guardian** | **0.29** | **94 %** | **0.30 h** | **82 %** | **79 %** | **20 / 20** |
 
 ![Benchmark](docs/figures/benchmark.png)
 
@@ -63,11 +64,11 @@ during development. All methods run at the same false-alarm budget.
 
 | Faults on transmitters... | PCA + RBC: detected / named | Guardian: detected / named |
 |---|---|---|
-| outside any control loop (72 runs) | 46 % / 31 % | **100 % / 93 %** |
-| inside a control loop (104 runs) | 56 % / 4 % | **95 % / 63 %** |
+| outside any control loop (72 runs) | 43 % / 33 % | **99 % / 99 %** |
+| inside a control loop (104 runs) | 55 % / 3 % | **96 % / 62 %** |
 
 **The soft sensor stays honest.** For faults on out-of-loop transmitters, its
-error drops from 0.089 to **0.014** mol% (normal: 0.010). 99.2 % of all bad
+error drops from 0.088 to **0.012** mol% (normal: 0.010). 99.4 % of all bad
 estimates (above 3× normal error) were made while Guardian had flagged the
 soft sensor.
 
@@ -76,8 +77,8 @@ valve attack.
 
 | | Limit checks | PCA + RBC | Guardian |
 |---|---|---|---|
-| Detected | 88 % | 98 % | **100 %** |
-| Median detection delay (over attack types) | 40 min | 32 min | **9 min** |
+| Detected | 90 % | 95 % | **100 %** |
+| Median detection delay (over attack types) | 33 min | 30 min | **10.5 min** |
 | Recognised as an attack | n/a | n/a | **50 %** |
 
 Guardian recognises every careless replay and link freeze as an attack. A
@@ -122,7 +123,8 @@ you:
 - start any of the 20 standard process disturbances
 - launch replay, freeze or stealth attacks
 - move setpoints
-- reveal the ground truth, to check Guardian's call against what you injected
+- reveal the ground truth, to check Guardian's call against what you injected.
+  Until you do, the server does not send it, so the demo stays blind.
 
 ![A replay attack in the control room](docs/figures/dashboard_attack.png)
 
@@ -163,12 +165,12 @@ Details and the known failure modes: [docs/method.md](docs/method.md).
 | Layer | Control |
 |---|---|
 | Plant connection | OPC UA, SignAndEncrypt only. Mutual certificate authentication. A server-side read-only ruleset refuses writes even from a trusted client. |
-| Input | Schema, NaN, instrument-span and timestamp validation before any model sees the data |
+| Input | Schema, NaN, instrument-span and timestamp validation before any model sees the data. Bad values are repaired per transmitter from past data only |
 | Data integrity | Replay, simultaneous-freeze and broken-feed detection |
 | Models | No pickle. HMAC-signed SHA-256 manifest; tampered or unsigned models are refused |
-| Audit | HMAC hash-chained log of every alarm, diagnosis change and action |
-| Dashboard | Local only. Random access token. Origin and host checks. Strict command schema with rate limits. Content-Security-Policy with no third-party code. |
-| Supply chain | Pinned dependencies; `pip-audit` and `bandit` clean, also run in CI |
+| Audit | HMAC hash-chained log of every alarm, diagnosis change and action; thread-safe, verified as a stream |
+| Dashboard | Local only. Random access token. Origin and host checks. Strict command schema with rate limits. Content-Security-Policy with no third-party code. Ground truth withheld until revealed. |
+| Supply chain | Pinned dependencies; `pip-audit`, `bandit` and `detect-secrets` clean, also run in CI |
 
 Threat model, IEC 62443 mapping and residual risks:
 [docs/security.md](docs/security.md). To report a vulnerability, see

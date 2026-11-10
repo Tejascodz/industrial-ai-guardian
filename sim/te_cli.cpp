@@ -49,6 +49,7 @@
 //                 pctg, sep_level, strip_level
 
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -75,6 +76,37 @@ static void die(const std::string& msg) {
     std::cerr << "te_cli: " << msg << std::endl;
     std::exit(2);
 }
+
+// Strict number parsing: the whole token must be a finite number inside
+// [lo, hi]. atof/sscanf would accept "nan", "inf" or trailing garbage.
+static bool parse_num(const std::string& tok, double lo, double hi, double& v) {
+    if (tok.empty()) return false;
+    char* end = nullptr;
+    errno = 0;
+    v = std::strtod(tok.c_str(), &end);
+    return errno == 0 && end == tok.c_str() + tok.size() && std::isfinite(v) && v >= lo && v <= hi;
+}
+
+static double num_or_die(const std::string& tok, double lo, double hi, const std::string& what) {
+    double v;
+    if (!parse_num(tok, lo, hi, v)) die("bad " + what + " '" + tok + "'");
+    return v;
+}
+
+static bool parse_int(const std::string& tok, int lo, int hi, int& v) {
+    double d;
+    if (!parse_num(tok, lo, hi, d) || d != std::floor(d)) return false;
+    v = static_cast<int>(d);
+    return true;
+}
+
+// Engineering bounds for commands (generous; the dashboard is stricter).
+static const double MAX_HOURS = 10000.0;   // event times
+static const double MAX_SP = 1.0e4;         // setpoint value, engineering units
+static const double MAX_FAULT = 1.0e4;      // sensor fault parameter
+static const double MAX_ACT = 100.0;        // valve offset, %
+static const double MAX_REPLAY_H = 100.0;   // replayed history, h
+static const double MAX_JITTER = 1.0;       // relative replay noise
 
 static bool valid_sp(const std::string& n) {
     return n == "prod_rate" || n == "reactor_pressure" || n == "reactor_level" || n == "reactor_temp" ||
@@ -239,8 +271,8 @@ static std::vector<int> parse_tags(const std::string& tags) {
     while (pos < tags.size()) {
         size_t c = tags.find(',', pos);
         if (c == std::string::npos) c = tags.size();
-        int tag = std::atoi(tags.substr(pos, c - pos).c_str());
-        if (tag < 1 || tag > NY) return {};
+        int tag;
+        if (!parse_int(tags.substr(pos, c - pos), 1, NY, tag)) return {};
         out.push_back(tag - 1);
         pos = c + 1;
     }
@@ -279,8 +311,9 @@ static int interactive(Sim& sim) {
                 continue;
             }
         } else if (cmd == "sp") {
-            std::string name; double v;
-            if (!(in >> name >> v) || !valid_sp(name)) err = "usage: sp NAME VALUE";
+            std::string name, tv; double v;
+            if (!(in >> name >> tv) || !valid_sp(name) || !parse_num(tv, -MAX_SP, MAX_SP, v))
+                err = "usage: sp NAME VALUE";
             else apply_setpoint(sim.ctlr, name, v);
         } else if (cmd == "idv") {
             int k, on;
@@ -291,24 +324,25 @@ static int interactive(Sim& sim) {
                 sim.plant->idv(k - 1, on ? 1 : 0);
             }
         } else if (cmd == "sf") {
-            int tag; std::string type; double p = 0.0;
-            if (!(in >> tag >> type) || tag < 1 || tag > NY || !valid_fault(type)) err = "usage: sf TAG TYPE P";
-            else {
-                in >> p;
-                sim.sfs.push_back({tag - 1, type, sim.t, p, false, sim.truth_of(tag - 1)});
-            }
+            int tag; std::string type, tp; double p = 0.0;
+            if (!(in >> tag >> type) || tag < 1 || tag > NY || !valid_fault(type) ||
+                ((in >> tp) && !parse_num(tp, -MAX_FAULT, MAX_FAULT, p)))
+                err = "usage: sf TAG TYPE P";
+            else sim.sfs.push_back({tag - 1, type, sim.t, p, false, sim.truth_of(tag - 1)});
         } else if (cmd == "sfclear") {
             std::string which;
             in >> which;
+            int tag = 0;
             if (which == "all") sim.sfs.clear();
+            else if (!parse_int(which, 1, NY, tag)) err = "usage: sfclear TAG|all";
             else {
-                int tag = std::atoi(which.c_str()) - 1;
+                tag -= 1;
                 sim.sfs.erase(std::remove_if(sim.sfs.begin(), sim.sfs.end(),
                               [&](const SensorFault& s) { return s.tag == tag; }), sim.sfs.end());
             }
         } else if (cmd == "act") {
-            int k; double d;
-            if (!(in >> k >> d) || k < 1 || k > NU) err = "usage: act K D";
+            int k; std::string td; double d;
+            if (!(in >> k >> td) || k < 1 || k > NU || !parse_num(td, -MAX_ACT, MAX_ACT, d)) err = "usage: act K D";
             else {
                 sim.acts.erase(std::remove_if(sim.acts.begin(), sim.acts.end(),
                                [&](const ActAttack& a) { return a.idx == k - 1; }), sim.acts.end());
@@ -317,10 +351,11 @@ static int interactive(Sim& sim) {
         } else if (cmd == "actclear") {
             sim.acts.clear();
         } else if (cmd == "replay") {
-            std::string tags; double rec_h, jitter = 0.0;
-            if (!(in >> tags >> rec_h) || rec_h <= 0) err = "usage: replay TAGS R J";
+            std::string tags, tr, tj; double rec_h, jitter = 0.0;
+            if (!(in >> tags >> tr) || !parse_num(tr, 1e-6, MAX_REPLAY_H, rec_h) ||
+                ((in >> tj) && !parse_num(tj, 0.0, MAX_JITTER, jitter)))
+                err = "usage: replay TAGS R J";
             else {
-                in >> jitter;
                 auto parsed = parse_tags(tags);
                 if (parsed.empty()) err = "bad tag list";
                 else {
@@ -356,40 +391,48 @@ int main(int argc, char* argv[]) {
             if (i + 1 >= argc) die("missing value for " + a);
             return argv[++i];
         };
-        if (a == "--hours") hours = std::atof(next().c_str());
+        if (a == "--hours") hours = num_or_die(next(), 0.0, MAX_HOURS, "--hours");
         else if (a == "--out") out = next();
-        else if (a == "--seed") seed = std::strtoul(next().c_str(), nullptr, 10);
-        else if (a == "--tstep") sim.tstep = std::atof(next().c_str());
-        else if (a == "--log-every") sim.log_every = std::atof(next().c_str());
+        else if (a == "--seed") seed = static_cast<unsigned long>(num_or_die(next(), 0.0, 4294967295.0, "--seed"));
+        else if (a == "--tstep") sim.tstep = num_or_die(next(), 0.0, 0.01, "--tstep");
+        else if (a == "--log-every") sim.log_every = num_or_die(next(), 0.0, 24.0, "--log-every");
         else if (a == "--interactive") live = true;
         else if (a == "--idv") {
             std::string v = next();
-            int k; double t;
-            if (std::sscanf(v.c_str(), "%d@%lf", &k, &t) != 2 || k < 1 || k > 20) die("bad --idv " + v);
+            size_t at = v.find('@');
+            int k;
+            if (at == std::string::npos || !parse_int(v.substr(0, at), 1, 20, k)) die("bad --idv " + v);
+            double t = num_or_die(v.substr(at + 1), 0.0, MAX_HOURS, "--idv time");
             sim.idvs.push_back({k - 1, t});
         } else if (a == "--sp") {
             std::string v = next();
             size_t at = v.find('@'), eq = v.find('=');
-            if (at == std::string::npos || eq == std::string::npos) die("bad --sp " + v);
+            if (at == std::string::npos || eq == std::string::npos || eq < at) die("bad --sp " + v);
             std::string name = v.substr(0, at);
             if (!valid_sp(name)) die("unknown setpoint " + name);
-            sim.sps.push_back({name, std::atof(v.substr(at + 1, eq - at - 1).c_str()),
-                               std::atof(v.substr(eq + 1).c_str()), false});
+            sim.sps.push_back({name, num_or_die(v.substr(at + 1, eq - at - 1), 0.0, MAX_HOURS, "--sp time"),
+                               num_or_die(v.substr(eq + 1), -MAX_SP, MAX_SP, "--sp value"), false});
         } else if (a == "--sf") {
             std::string v = next();
             size_t c = v.find(':'), at = v.find('@'), eq = v.find('=');
-            if (c == std::string::npos || at == std::string::npos) die("bad --sf " + v);
-            int tag = std::atoi(v.substr(0, c).c_str());
-            if (tag < 1 || tag > NY) die("bad sensor tag in " + v);
+            if (c == std::string::npos || at == std::string::npos || at < c || (eq != std::string::npos && eq < at))
+                die("bad --sf " + v);
+            int tag;
+            if (!parse_int(v.substr(0, c), 1, NY, tag)) die("bad sensor tag in " + v);
             std::string type = v.substr(c + 1, at - c - 1);
             if (!valid_fault(type)) die("bad sensor fault type " + type);
-            double t = std::atof(v.substr(at + 1, (eq == std::string::npos ? v.size() : eq) - at - 1).c_str());
-            double p = (eq == std::string::npos) ? 0.0 : std::atof(v.substr(eq + 1).c_str());
+            double t = num_or_die(v.substr(at + 1, (eq == std::string::npos ? v.size() : eq) - at - 1),
+                                  0.0, MAX_HOURS, "--sf time");
+            double p = (eq == std::string::npos) ? 0.0 : num_or_die(v.substr(eq + 1), -MAX_FAULT, MAX_FAULT, "--sf value");
             sim.sfs.push_back({tag - 1, type, t, p, false, 0.0});
         } else if (a == "--act") {
             std::string v = next();
-            int k; double t, d;
-            if (std::sscanf(v.c_str(), "%d@%lf=%lf", &k, &t, &d) != 3 || k < 1 || k > NU) die("bad --act " + v);
+            size_t at = v.find('@'), eq = v.find('=');
+            int k;
+            if (at == std::string::npos || eq == std::string::npos || eq < at || !parse_int(v.substr(0, at), 1, NU, k))
+                die("bad --act " + v);
+            double t = num_or_die(v.substr(at + 1, eq - at - 1), 0.0, MAX_HOURS, "--act time");
+            double d = num_or_die(v.substr(eq + 1), -MAX_ACT, MAX_ACT, "--act value");
             sim.acts.push_back({k - 1, t, d});
         } else if (a == "--replay") {
             std::string v = next();
@@ -397,9 +440,14 @@ int main(int argc, char* argv[]) {
             if (at == std::string::npos) die("bad --replay " + v);
             sim.rp.tags = parse_tags(v.substr(0, at));
             if (sim.rp.tags.empty()) die("bad replay tag in " + v);
-            if (std::sscanf(v.substr(at + 1).c_str(), "%lf:%lf:%lf", &sim.rp.t0, &sim.rp.rec_h, &sim.rp.jitter) < 2 ||
-                sim.rp.rec_h <= 0)
-                die("bad --replay " + v);
+            std::string rest = v.substr(at + 1);
+            size_t c1 = rest.find(':'), c2 = (c1 == std::string::npos) ? c1 : rest.find(':', c1 + 1);
+            if (c1 == std::string::npos) die("bad --replay " + v);
+            sim.rp.t0 = num_or_die(rest.substr(0, c1), 0.0, MAX_HOURS, "--replay start");
+            sim.rp.rec_h = num_or_die(rest.substr(c1 + 1, c2 == std::string::npos ? std::string::npos : c2 - c1 - 1),
+                                      1e-6, MAX_REPLAY_H, "--replay length");
+            sim.rp.jitter = (c2 == std::string::npos) ? 0.0
+                          : num_or_die(rest.substr(c2 + 1), 0.0, MAX_JITTER, "--replay jitter");
         } else die("unknown argument " + a);
     }
 

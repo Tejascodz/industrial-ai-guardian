@@ -130,7 +130,11 @@ def score(method: Method, test: list[Prepared], limits: np.ndarray) -> pd.DataFr
             "trip_t": _trip_time(m.get("shutdown", "")),
         }
         if m["event_class"] != NORMAL:
-            after = np.flatnonzero(alarm & (p.time >= m["event_t"]))
+            # Only an alarm that starts at or after the event counts. An alarm
+            # already standing when the event begins is a false alarm, and
+            # crediting it would report a detection with zero delay.
+            rising = alarm & ~np.r_[False, alarm[:-1]]
+            after = np.flatnonzero(rising & (p.time >= m["event_t"]))
             if len(after):
                 i = int(after[0])
                 j = min(i + DIAG_LATER, len(p.time) - 1)

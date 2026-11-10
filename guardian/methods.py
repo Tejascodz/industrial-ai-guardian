@@ -208,7 +208,7 @@ class Guardian(Method):
 
         blocks: list[tuple[str, list[str], np.ndarray]] = []
         report = validate(run)
-        run = sanitize(run, report)
+        run = sanitize(run, report, fallback=dict(zip(self.scaler.cols, self.scaler.mean)))
         if self.use_integrity:
             blocks.append(("V", ["V"], report.pipeline_bad[:, None].astype(float)))
 

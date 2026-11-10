@@ -42,7 +42,38 @@ def test_validation_flags_nan_span_and_time_problems():
     assert rep.pipeline_bad[10] and rep.pipeline_bad[30] and not rep.pipeline_bad[20]
     clean = sanitize(df, rep)
     assert np.isfinite(clean[MONITORED].to_numpy()).all()
-    assert clean.loc[20, "xmeas_7"] == clean.loc[19, "xmeas_7"]  # last valid value held
+    assert clean.loc[10, "xmeas_9"] == df.loc[9, "xmeas_9"]  # last valid value held
+    assert clean.loc[20, "xmeas_7"] == 4000.0  # saturates at the span limit
+
+
+def test_sanitize_repairs_one_sensor_without_touching_the_others():
+    df = _run(1)
+    df.loc[50, "xmeas_9"] = np.nan
+    df.loc[60, "xmeas_7"] = -1e6
+    df.loc[70, "time"] = df.loc[69, "time"]  # time problem: values themselves are fine
+    clean = sanitize(df, validate(df))
+    others = [t for t in MONITORED if t not in ("xmeas_9", "xmeas_7")]
+    pd.testing.assert_frame_equal(clean[others], df[others])
+    assert clean.loc[70, MONITORED].equals(df.loc[70, MONITORED])
+    assert clean.loc[60, "xmeas_7"] == 0.0
+
+
+def test_sanitize_never_uses_future_values():
+    df = _run(2)
+    df.loc[0:4, "xmeas_9"] = np.nan  # no valid reading yet
+    clean = sanitize(df, validate(df), fallback={"xmeas_9": 123.0})
+    assert (clean.loc[0:4, "xmeas_9"] == 123.0).all()  # not the value at row 5
+    early = sanitize(df.iloc[:20], validate(df.iloc[:20]))
+    full = sanitize(df, validate(df))
+    pd.testing.assert_frame_equal(early, full.iloc[:20])  # past output fixed once seen
+
+
+def test_off_scale_sensor_still_alarms(fitted):
+    run = _run(8)
+    run.loc[200:, "xmeas_7"] = 99999.0  # transmitter driven off scale
+    a = fitted.analyze(run)
+    r = a.S[:, a.extra["idx"]["R"]]
+    assert r[220:].max() > 10 * r[:180].max()
 
 
 def test_validation_rejects_missing_or_non_numeric_columns():
@@ -143,4 +174,61 @@ def test_artifact_manifest_must_cover_every_file(fitted, tmp_path):
     del m["files"]["arrays.npz"]  # attacker drops a file from the manifest to swap it unchecked
     (tmp_path / "manifest.json").write_text(json.dumps(m))
     with pytest.raises(artifacts.ArtifactIntegrityError):
+        artifacts.load(tmp_path, allow_unsigned=True)
+
+
+def test_artifact_load_needs_a_key_unless_explicitly_unsigned(fitted, tmp_path):
+    artifacts.save(fitted, tmp_path)  # unsigned
+    with pytest.raises(artifacts.ArtifactIntegrityError):
         artifacts.load(tmp_path)
+    g2, _, _ = artifacts.load(tmp_path, allow_unsigned=True)
+    run = _run(99)
+    np.testing.assert_allclose(fitted.analyze(run).S, g2.analyze(run).S)
+
+
+def test_audit_log_stays_consistent_under_concurrent_writers(tmp_path):
+    import threading
+
+    log = AuditLog(tmp_path / "a.jsonl", key=b"k")
+
+    def writer(w):
+        for i in range(200):
+            log.append({"w": w, "i": i})
+
+    threads = [threading.Thread(target=writer, args=(w,)) for w in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    ok, bad, tail = log.check(5)
+    assert ok and bad is None and tail[-1]["seq"] == 799
+
+
+def test_audit_verify_reports_garbage_instead_of_crashing(tmp_path):
+    path = tmp_path / "a.jsonl"
+    log = AuditLog(path, key=b"k")
+    log.append({"x": 1})
+    with path.open("a") as f:
+        f.write('[1, 2]\n{"seq": 1}\nnot json\n')
+    assert verify(path, b"k") == (False, 1)
+    assert [r["seq"] for r in log.tail(10)] == [0, 1]  # non-records skipped, no exception
+
+
+# ----- simulator input -----------------------------------------------------------
+def test_simulator_refuses_non_finite_and_out_of_range_numbers(tmp_path):
+    import subprocess  # nosec B404: the bundled simulator, fixed arguments, no shell
+
+    from guardian.sim import BINARY
+
+    if not BINARY.exists():
+        pytest.skip("simulator not built (make -C sim)")
+    for bad in (["--hours", "nan"], ["--hours", "2", "--idv", "1@inf"], ["--hours", "2", "--sf", "9:bias@1=nan"],
+                ["--hours", "2", "--act", "10@1=1e9"], ["--hours", "2", "--sp", "prod_rate@1=23abc"]):
+        r = subprocess.run([str(BINARY), *bad, "--out", str(tmp_path / "x.csv")],  # nosec B603
+                           capture_output=True, text=True, timeout=60)
+        assert r.returncode == 2 and "bad" in r.stderr, bad
+    script = "sp prod_rate nan\nsf 9 bias inf\nact 3 1e9\nreplay 9 nan\nsfclear 9x\nsf 9 bias 0.5\nquit\n"
+    r = subprocess.run([str(BINARY), "--interactive"], input=script,  # nosec B603
+                       capture_output=True, text=True, timeout=60)
+    replies = [x for x in r.stdout.splitlines() if x.startswith(("OK", "ERR"))]
+    assert [x.split()[0] for x in replies] == ["ERR"] * 5 + ["OK"]
