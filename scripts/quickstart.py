@@ -62,8 +62,8 @@ def main() -> None:
     after = np.flatnonzero(rising & (t >= EVENT_T))
 
     tag = TAGS[args.tag]
-    print(f"injected  {args.kind} of {args.size:g} {tag.unit} on {ISA[args.tag]} "
-          f"({tag.description}) at t = {EVENT_T:g} h")
+    what = args.kind if args.kind == "stuck" else f"{args.kind} of {args.size:g} {tag.unit}"
+    print(f"injected  {what} on {ISA[args.tag]} ({tag.description}) at t = {EVENT_T:g} h")
     print(f"before    {early} false alarm(s) in {EVENT_T - BURN_IN_H:g} h of normal operation")
     if not len(after):
         print("alarm     none")

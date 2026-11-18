@@ -236,7 +236,7 @@ def all_splits() -> dict[str, list[Scenario]]:
         "train": [normal_history(1000 + i) for i in range(30)],
         "val": make_split("val", 20000, n_normal=12, sensor_reps=1, process_reps=2, regime_reps=1),
         # Seed bases 50000 (test) and 80000 (test_attack) are retired: that split
-        # was seen during development (see "Benchmark" in README.md).
+        # was seen during development (README.md, "What did not work or is not significant").
         "test": make_split("test", 60000, n_normal=24, sensor_reps=2, process_reps=4, regime_reps=3),
     }
 
