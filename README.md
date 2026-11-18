@@ -24,17 +24,17 @@ the process itself has changed, or the data has been tampered with, and keeps th
 <table>
 <tr>
 <td align="center" width="33%">
-<h2>94.3%</h2>
+<h3>94.3%</h3>
 events detected<br>
 <sub>249 of 264 test events, 95% CI 90.8–96.5%.<br>Best baseline: 55.3% (146 of 264).</sub>
 </td>
 <td align="center" width="33%">
-<h2>79%</h2>
+<h3>79%</h3>
 faulty transmitter named<br>
 <sub>135 of 171 detected transmitter faults, 95% CI 72–84%.<br>Best baseline: 33% (24 of 73).</sub>
 </td>
 <td align="center" width="33%">
-<h2>42 / 42</h2>
+<h3>42 / 42</h3>
 integrity attacks detected<br>
 <sub>14 attack types, 3 runs each, median delay 10.5 min.<br>Baselines: 38–40 of 42, median 30–33 min.</sub>
 </td>
