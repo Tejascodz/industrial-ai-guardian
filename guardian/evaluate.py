@@ -11,9 +11,8 @@ from the separate test set.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import re
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -159,7 +158,6 @@ def summarize(df: pd.DataFrame, suffix: str = "_1h") -> dict:
     ev = df[df.true_class != NORMAL]
     det = ev[ev.detected]
     cls = det[f"diag_class{suffix}"]
-    tag = det[f"diag_tag{suffix}"]
     sens = det[det.true_class == "sensor_fault"]
     proc = det[det.true_class == "process_fault"]
     reg = det[det.true_class == "regime_change"]

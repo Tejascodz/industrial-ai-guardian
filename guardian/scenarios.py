@@ -17,8 +17,18 @@ from __future__ import annotations
 
 import numpy as np
 
-from .sim import (INTEGRITY, PROCESS, REGIME, SENSOR, BASE_SP, ActuatorAttack, Replay, Scenario,
-                  SensorFault, SetpointMove)
+from .sim import (
+    BASE_SP,
+    INTEGRITY,
+    PROCESS,
+    REGIME,
+    SENSOR,
+    ActuatorAttack,
+    Replay,
+    Scenario,
+    SensorFault,
+    SetpointMove,
+)
 from .tags import FIELD_TAGS
 
 # Normal operating envelope (operators may move setpoints within these ranges).
@@ -172,7 +182,7 @@ def stealth_direction() -> dict[str, float]:
     """
     import pandas as pd
 
-    from .features import DATA, BURN_IN_H
+    from .features import BURN_IN_H, DATA
     from .tags import MONITORED
 
     df = pd.read_parquet(DATA / "train.parquet", columns=["time", *MONITORED])
@@ -226,7 +236,7 @@ def all_splits() -> dict[str, list[Scenario]]:
         "train": [normal_history(1000 + i) for i in range(30)],
         "val": make_split("val", 20000, n_normal=12, sensor_reps=1, process_reps=2, regime_reps=1),
         # Seed bases 50000 (test) and 80000 (test_attack) are retired: that split
-        # was seen during development (see docs/benchmark.md).
+        # was seen during development (see "Benchmark" in README.md).
         "test": make_split("test", 60000, n_normal=24, sensor_reps=2, process_reps=4, regime_reps=3),
     }
 

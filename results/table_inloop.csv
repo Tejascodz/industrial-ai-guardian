@@ -1,0 +1,17 @@
+instrument,fault_kind,named,detected
+flow,bias,4,14
+flow,drift,5,14
+flow,noise,11,14
+flow,stuck,14,14
+level,bias,0,6
+level,drift,0,2
+level,noise,4,6
+level,stuck,6,6
+pressure,bias,2,2
+pressure,drift,1,2
+pressure,noise,2,2
+pressure,stuck,2,2
+temperature,bias,4,4
+temperature,drift,2,4
+temperature,noise,3,4
+temperature,stuck,4,4

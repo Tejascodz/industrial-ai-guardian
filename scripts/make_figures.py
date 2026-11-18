@@ -2,7 +2,7 @@
 
     python scripts/make_figures.py
 
-Needs results from run_benchmark.py and run_softsensor.py.
+Needs results from run_benchmark.py, run_softsensor.py and summarize_results.py.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import pandas as pd  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from dashboard.plant import ISA  # noqa: E402
 from guardian.evaluate import calibrate, persisted, prepare  # noqa: E402
 from guardian.features import load_split, runs  # noqa: E402
 from guardian.methods import Guardian  # noqa: E402
@@ -35,7 +36,7 @@ plt.rcParams.update({
     "font.size": 10, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
     "xtick.color": MUTED, "ytick.color": MUTED, "axes.grid": True, "grid.color": GRID,
     "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False,
-    "legend.frameon": False,
+    "legend.frameon": True, "legend.framealpha": 1.0, "legend.edgecolor": "none", "legend.facecolor": "white",
 })
 
 
@@ -55,7 +56,8 @@ def _case(g, lim, test, tm, scenario, tag):
     run = test[scenario]
     p = prepare(g, [(scenario, run)], tm)[0]
     alarm = persisted((p.a.S > lim).any(axis=1))
-    i_alarm = int(np.flatnonzero(alarm & (p.time >= tm[scenario]["event_t"]))[0])
+    rising = alarm & ~np.r_[False, alarm[:-1]]
+    i_alarm = int(np.flatnonzero(rising & (p.time >= tm[scenario]["event_t"]))[0])
     cls, diag_tag = g.diagnose(p.a, min(i_alarm + 20, len(p.time) - 1), lim)
     k = MONITORED.index(tag)
     x = g.scaler.transform(run)
@@ -65,14 +67,17 @@ def _case(g, lim, test, tm, scenario, tag):
 
 
 def _mark(ax, t_ev, t_alarm, text):
+    """Fault and alarm as vertical lines, explained in a line under the title (never on the data)."""
     for a_ in ax:
         a_.axvline(t_ev, color=MUTED, ls="--", lw=0.9)
         a_.axvline(t_alarm, color=RED, ls="-", lw=0.9)
-        a_.legend(loc="upper left", fontsize=8.5)
         a_.set_xlim(8, 30)
-    y0, y1 = ax[0].get_ylim()
-    ax[0].text(t_ev, y0, " fault starts", color=MUTED, fontsize=8, va="bottom")
-    ax[0].text(t_alarm, y1, text, color=RED, fontsize=8, va="top")
+    ax[0].text(0, 1.03, f"Dashed line: fault starts.  Red line: {text}.", transform=ax[0].transAxes,
+               fontsize=9, color=MUTED)
+
+
+def _verdict(delay_h: float, cls: str, tag: str | None) -> str:
+    return f"alarm {delay_h * 60:.0f} min later, diagnosed as {cls.replace('_', ' ')} on {ISA.get(tag, tag)}"
 
 
 def loop_fault(g, lim, test, tm, scenario="test_sf_xmeas_9_bias_0") -> None:
@@ -84,11 +89,11 @@ def loop_fault(g, lim, test, tm, scenario="test_sf_xmeas_9_bias_0") -> None:
     ax[0].plot(t, run["xmeas_9"], color=ORANGE, lw=1.2, label="Transmitter reading (what the DCS sees)")
     ax[0].set_ylabel("Reactor temp. [°C]")
     ax[0].set_title("A biased transmitter hides behind its own control loop, the cooling water does not",
-                    loc="left", fontsize=11, fontweight="bold")
+                    loc="left", fontsize=11, fontweight="bold", pad=20)
     ax[1].plot(t, run["xmeas_21"], color=BLUE, lw=1.2, label="Reactor cooling-water outlet temperature")
     ax[1].set_ylabel("CW outlet [°C]")
     ax[1].set_xlabel("Time [h]")
-    _mark(ax, t_ev, t[i], f" alarm +{(t[i] - t_ev) * 60:.0f} min: {cls.replace('_', ' ')} on {tag}")
+    _mark(ax, t_ev, t[i], _verdict(t[i] - t_ev, cls, tag))
     for a_ in ax:
         a_.legend(loc="center right", fontsize=8.5)
     fig.tight_layout()
@@ -109,13 +114,13 @@ def protected_softsensor(g, lim, ss, test, tm, scenario="test_sf_xmeas_18_drift_
     ax[0].plot(t, virtual, color=BLUE, lw=1.0, alpha=0.85, label="Guardian virtual sensor")
     ax[0].set_ylabel("Stripper temp. [°C]")
     ax[0].set_title("Keeping the product-quality soft sensor alive through a transmitter drift",
-                    loc="left", fontsize=11, fontweight="bold")
+                    loc="left", fontsize=11, fontweight="bold", pad=20)
     ax[1].plot(t, aligned_truth(run), color=INK, lw=1.4, label="Product analyzer (aligned for dead time)")
     ax[1].plot(t, raw, color=ORANGE, lw=1.1, label="Soft sensor, raw inputs")
     ax[1].plot(t, prot, color=BLUE, lw=1.1, label="Soft sensor, Guardian-protected")
     ax[1].set_ylabel("Product E [mol%]")
     ax[1].set_xlabel("Time [h]")
-    _mark(ax, t_ev, t[i], f" alarm +{(t[i] - t_ev) * 60:.0f} min: {cls.replace('_', ' ')} on {tag}")
+    _mark(ax, t_ev, t[i], _verdict(t[i] - t_ev, cls, tag))
     ax[0].legend(loc="lower left", fontsize=8.5)
     ax[1].legend(loc="upper left", fontsize=8.5)
     fig.tight_layout()
@@ -124,33 +129,41 @@ def protected_softsensor(g, lim, ss, test, tm, scenario="test_sf_xmeas_18_drift_
 
 
 def benchmark_bars() -> None:
-    sm = pd.read_csv(RES / "benchmark_summary.csv")
-    sm = sm[sm.diagnosis == "1 h after detection"]
+    """Hero chart: all four methods at the same false-alarm budget, with 95 % intervals."""
+    t = pd.read_csv(RES / "table_main.csv")  # python scripts/summarize_results.py
     order = ["Limit checks", "PCA + contributions", "PCA + RBC", "Guardian"]
-    sm = sm.set_index("method").loc[order]
-    metrics = [("detection_rate", "Events detected"),
-               ("class_accuracy", "Correct class\n(of detected)"),
-               ("sensor_correct_tag", "Faulty transmitter\nnamed correctly")]
-    fig, ax = plt.subplots(figsize=(9, 3.6))
-    w = 0.2
-    colors = [GRID, "#9ca3af", MUTED, BLUE]
+    metrics = [("detected", "Events detected", "of 264 events"),
+               ("correct_class", "Diagnosis class correct", "of detected events"),
+               ("transmitter_named", "Faulty transmitter named", "of detected transmitter faults")]
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    w = 0.19
+    colors = ["#d0d7de", "#afb8c1", "#8c959f", BLUE]
     for n, mth in enumerate(order):
-        vals = [sm.loc[mth, m] for m, _ in metrics]
+        r = t[t.method == mth].set_index("metric")
+        vals = np.array([r.loc[m, "value"] for m, _, _ in metrics])
+        lo = vals - np.array([r.loc[m, "ci_low"] for m, _, _ in metrics])
+        hi = np.array([r.loc[m, "ci_high"] for m, _, _ in metrics]) - vals
         pos = np.arange(len(metrics)) + (n - 1.5) * w
-        ax.bar(pos, vals, w, color=colors[n], label=mth)
-        for x_, v in zip(pos, vals):
-            ax.text(x_, v + 0.015, f"{v:.0%}", ha="center", fontsize=7.5, color=INK)
-    ax.set_xticks(np.arange(len(metrics)), [m[1] for m in metrics])
-    ax.set_ylim(0, 1.1)
+        ax.bar(pos, vals, w * 0.92, color=colors[n], label=mth, zorder=2)
+        ax.errorbar(pos, vals, yerr=[lo, hi], fmt="none", ecolor=INK, elinewidth=0.9, capsize=2.5, zorder=3)
+        for x_, v, h in zip(pos, vals, hi, strict=True):
+            ax.text(x_, v + h + 0.02, f"{v:.0%}", ha="center", fontsize=8.5, color=INK,
+                    fontweight="bold" if mth == "Guardian" else "normal")
+    ax.set_xticks(np.arange(len(metrics)), [f"{a}\n{b}" for _, a, b in metrics], fontsize=9.5)
+    for lab in ax.get_xticklabels():
+        lab.set_color(INK)
+    ax.set_ylim(0, 1.12)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
     ax.grid(axis="x", visible=False)
-    fa = sm["false_alarms_per_day"]
-    span = f"{fa.min():.2f}" if round(fa.min(), 2) == round(fa.max(), 2) else f"{fa.min():.2f} to {fa.max():.2f}"
-    ax.set_title(f"Test set, same false-alarm budget ({span} false alarms/day on test)",
-                 loc="left", fontsize=11, fontweight="bold")
-    ax.legend(ncol=4, fontsize=8.5, loc="upper center", bbox_to_anchor=(0.5, -0.18))
+    fa = t[t.metric == "false_alarms_per_day"].set_index("method").loc[order, "value"]
+    ax.set_title("Guardian vs. classical process monitoring, same false-alarm budget",
+                 loc="left", fontsize=12, fontweight="bold", pad=22)
+    ax.text(0, 1.035, f"Closed-loop Tennessee Eastman, 288 held-out test runs. "
+            f"False alarms {fa.min():.2f} to {fa.max():.2f} per day. Error bars: 95 % intervals.",
+            transform=ax.transAxes, fontsize=9, color=MUTED)
+    ax.legend(ncol=4, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
     fig.tight_layout()
-    fig.savefig(FIG / "benchmark.png", dpi=160)
+    fig.savefig(FIG / "benchmark.png", dpi=200, facecolor="white")
     plt.close(fig)
 
 

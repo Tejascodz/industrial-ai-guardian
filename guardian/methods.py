@@ -38,7 +38,7 @@ class Analysis:
 class Method:
     name = "method"
 
-    def fit(self, train_runs: list[pd.DataFrame], val_normal_runs: list[pd.DataFrame]) -> "Method":
+    def fit(self, train_runs: list[pd.DataFrame], val_normal_runs: list[pd.DataFrame]) -> Method:
         self.scaler = Scaler(MONITORED).fit(pd.concat(train_runs))
         return self
 
@@ -208,7 +208,7 @@ class Guardian(Method):
 
         blocks: list[tuple[str, list[str], np.ndarray]] = []
         report = validate(run)
-        run = sanitize(run, report, fallback=dict(zip(self.scaler.cols, self.scaler.mean)))
+        run = sanitize(run, report, fallback=dict(zip(self.scaler.cols, self.scaler.mean, strict=True)))
         if self.use_integrity:
             blocks.append(("V", ["V"], report.pipeline_bad[:, None].astype(float)))
 
@@ -249,7 +249,7 @@ class Guardian(Method):
         extra["recon"] = recon
 
         idx, start = {}, 0
-        for fam, names, M in blocks:
+        for fam, names, _ in blocks:
             idx[fam] = slice(start, start + len(names))
             start += len(names)
         extra["idx"] = idx

@@ -25,7 +25,7 @@ class VirtualSensorBank:
         cols = np.tile(np.arange(self.n), self.lags + 1)  # tag index of each lagged column
         return [cols != j for j in range(self.n)]
 
-    def fit(self, runs_x: list[np.ndarray]) -> "VirtualSensorBank":
+    def fit(self, runs_x: list[np.ndarray]) -> VirtualSensorBank:
         Z = np.vstack([lag_stack(x, self.lags) for x in runs_x])
         X = np.vstack(runs_x)
         self.masks = self._masks()
@@ -41,7 +41,7 @@ class VirtualSensorBank:
     def predict(self, x: np.ndarray) -> np.ndarray:
         return lag_stack(x, self.lags) @ self.coef.T + self.intercept
 
-    def calibrate(self, runs_x: list[np.ndarray]) -> "VirtualSensorBank":
+    def calibrate(self, runs_x: list[np.ndarray]) -> VirtualSensorBank:
         """Residual scale from held-out normal runs (not the training data)."""
         r = np.vstack([x - self.predict(x) for x in runs_x])
         self.sigma = r.std(axis=0) + 1e-9

@@ -34,7 +34,7 @@ def _write(split: str, scenarios, jobs: int) -> None:
     t0 = time.time()
     res = Parallel(n_jobs=jobs)(delayed(_one)(s) for s in scenarios)
     frames, meta = [], []
-    for s, (df, trip) in zip(scenarios, res):
+    for s, (df, trip) in zip(scenarios, res, strict=True):
         frames.append(df)
         m = asdict(s)
         m["description"] = s.describe()

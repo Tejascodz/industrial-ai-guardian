@@ -8,7 +8,7 @@ values, and per-sample ground-truth labels.
 
 from __future__ import annotations
 
-import subprocess  # nosec B404 - only runs the bundled simulator binary
+import subprocess  # nosec B404
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -148,8 +148,9 @@ def run(s: Scenario) -> pd.DataFrame:
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / "run.csv"
         # Fixed binary, no shell, arguments built from typed scenario fields.
-        p = subprocess.run([str(BINARY), "--out", str(out), *s.args()],  # nosec B603
-                           capture_output=True, text=True, timeout=600)
+        p = subprocess.run(  # noqa: S603  # nosec B603
+            [str(BINARY), "--out", str(out), *s.args()], capture_output=True, text=True, timeout=600
+        )
         if p.returncode not in (0, 3):
             raise RuntimeError(p.stderr.strip())
         df = pd.read_csv(out)

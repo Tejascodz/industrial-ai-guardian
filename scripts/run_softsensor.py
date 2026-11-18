@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from guardian.evaluate import calibrate, persisted, prepare  # noqa: E402
 from guardian.features import load_split, runs  # noqa: E402
-from guardian.methods import FIELD_IDX, Guardian  # noqa: E402
+from guardian.methods import Guardian  # noqa: E402
 from guardian.sim import NORMAL, SENSOR  # noqa: E402
 from guardian.softsensor import SoftSensor, aligned_truth  # noqa: E402
 from guardian.tags import MONITORED, TAGS  # noqa: E402
@@ -117,12 +117,13 @@ def main() -> None:
     # Are bad soft-sensor estimates caught? "Bad" = error above k x normal RMSE.
     base = rmse(normal.raw - normal.truth)
     err = (df.raw - df.truth).abs()
+    ok = df.status == "OK"
     flags = []
     for k in (3, 5, 10):
         bad = err > k * base
         flags.append({"error_above_x_normal_rmse": k, "bad_estimates": int(bad.sum()),
                       "share_flagged": float((bad & (df.status != "OK")).sum() / max(bad.sum(), 1)),
-                      "bad_share_when_ok": float((bad & (df.status == "OK")).sum() / max((df.status == "OK").sum(), 1))})
+                      "bad_share_when_ok": float((bad & ok).sum() / max(ok.sum(), 1))})
     pd.DataFrame(flags).to_csv(RESULTS / "softsensor_flags.csv", index=False)
     res.to_csv(RESULTS / "softsensor_summary.csv", index=False)
 

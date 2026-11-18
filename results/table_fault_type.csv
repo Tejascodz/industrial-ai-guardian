@@ -1,0 +1,9 @@
+method,fault_kind,detected_runs,named_of_detected,ci_low,ci_high
+PCA + RBC,bias,20,0.35,0.181192,0.567146
+PCA + RBC,drift,34,0.529412,0.367367,0.685485
+PCA + RBC,noise,12,0.166667,0.0469651,0.448031
+PCA + RBC,stuck,22,0,0,0.148655
+Guardian,bias,44,0.636364,0.488664,0.762165
+Guardian,drift,40,0.65,0.495059,0.778655
+Guardian,noise,44,0.863636,0.732905,0.93597
+Guardian,stuck,43,1,0.91799,1

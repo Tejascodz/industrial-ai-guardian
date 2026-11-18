@@ -1,0 +1,5 @@
+method,transmitters,runs,detected,named_of_detected,detected_k,named_k
+PCA + RBC,outside control loops,72,0.430556,0.774194,31,24
+PCA + RBC,inside a control loop,104,0.548077,0.0526316,57,3
+Guardian,outside control loops,72,0.986111,1,71,71
+Guardian,inside a control loop,104,0.961538,0.64,100,64

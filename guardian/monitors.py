@@ -17,7 +17,7 @@ class PCAMonitor:
     def __init__(self, var_explained: float = 0.90):
         self.var_explained = var_explained
 
-    def fit(self, X: np.ndarray) -> "PCAMonitor":
+    def fit(self, X: np.ndarray) -> PCAMonitor:
         self.mu = X.mean(axis=0)
         C = np.cov(X - self.mu, rowvar=False)
         w, V = np.linalg.eigh(C)

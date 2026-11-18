@@ -10,8 +10,7 @@ pytest.importorskip("asyncua")
 
 from asyncua import Client, ua  # noqa: E402
 
-from guardian.opcua import (PlantServer, SecureReadOnlyClient,  # noqa: E402
-                            make_identity)
+from guardian.opcua import PlantServer, SecureReadOnlyClient, make_identity  # noqa: E402
 
 TAGS = ["xmeas_9", "xmeas_21", "xmv_10"]
 
@@ -55,14 +54,14 @@ def test_secure_client_reads_plant_values(pki):
 def test_server_refuses_unencrypted_sessions(pki):
     async def body(ep):
         c = Client(ep, timeout=5)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 - asyncua raises several types here
             await c.connect()  # no security policy offered -> refused
     _with_server(pki, body)
 
 
 def test_server_refuses_unknown_certificates(pki):
     async def body(ep):
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 - asyncua raises several types here
             async with SecureReadOnlyClient(ep, pki["intruder"], pki["server"].cert, TAGS) as c:
                 await c.read_snapshot()
     _with_server(pki, body)

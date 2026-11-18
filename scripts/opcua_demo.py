@@ -14,12 +14,12 @@ OPC UA server quickly (one sample per tick) and prints alarms as they happen.
 from __future__ import annotations
 
 import argparse
-import contextlib
 import asyncio
+import contextlib
 import logging
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -64,7 +64,7 @@ async def _serve(pki: Path, g, limits, key: bytes, run: pd.DataFrame, start_h: f
     audit_path = ROOT / "results" / "audit_demo.jsonl"
     audit_path.unlink(missing_ok=True)
     audit = AuditLog(audit_path, key=key)
-    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
     history: list[dict] = []
     last = None
     try:
@@ -93,7 +93,8 @@ async def _serve(pki: Path, g, limits, key: bytes, run: pd.DataFrame, start_h: f
         with contextlib.suppress(Exception):  # a server that never started has nothing to stop
             await server.stop()
     ok, bad = verify(audit_path, key)
-    print(f"audit log: {audit_path.relative_to(ROOT)} ({audit.seq} records, chain {'verified' if ok else f'BROKEN at {bad}'})")
+    chain = "verified" if ok else f"BROKEN at {bad}"
+    print(f"audit log: {audit_path.relative_to(ROOT)} ({audit.seq} records, chain {chain})")
 
 
 if __name__ == "__main__":

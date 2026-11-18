@@ -22,16 +22,14 @@ import secrets
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
-
-from guardian.audit import AuditLog
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import plant
 from .engine import CommandError, LiveSession
@@ -110,8 +108,11 @@ class RevealCmd(_Cmd):
     on: bool
 
 
-Command = Annotated[Union[Run, Speed, Reset, SetpointCmd, FaultCmd, ClearFaults, DisturbanceCmd,
-                          AttackCmd, StopAttacks, Ack, AuditCmd, RevealCmd], Field(discriminator="cmd")]
+Command = Annotated[
+    Run | Speed | Reset | SetpointCmd | FaultCmd | ClearFaults | DisturbanceCmd | AttackCmd | StopAttacks | Ack
+    | AuditCmd | RevealCmd,
+    Field(discriminator="cmd"),
+]
 COMMAND = TypeAdapter(Command)
 
 

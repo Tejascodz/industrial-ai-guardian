@@ -1,77 +1,157 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">How Guardian processes one plant sample</title>
+  <desc id="d">A plant sample is validated and repaired, turned into evidence channels by a virtual sensor bank, instrument checks, integrity checks and an operating-envelope check, raises an alarm when any channel stays above its calibrated limit for three samples, and is diagnosed by six ordered rules into a sensor fault, process fault, regime change or integrity attack, which drives the protected soft sensor, the alarm list and the audit log.</desc>
   <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#8a939c"/>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
     </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.2; }
+      .key { fill: #f6f8fa; stroke: #d0d7de; stroke-width: 1.2; }
+      .acc { fill: #eff4ff; stroke: #2563eb; stroke-width: 1.4; }
+      .h { font-size: 15px; font-weight: 600; fill: #1f2328; }
+      .s { font-size: 12.5px; fill: #1f2328; }
+      .m { font-size: 12px; fill: #57606a; }
+      .n { font-size: 12px; font-weight: 700; fill: #2563eb; }
+      .ln { stroke: #57606a; stroke-width: 1.3; fill: none; }
+      .code { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; fill: #1f2328; }
+    </style>
   </defs>
-  <rect width="1100" height="440" rx="10" fill="#23282d"/>
+  <rect width="1200" height="660" fill="#ffffff"/>
 
-  <!-- Plant -->
-  <rect x="30" y="70" width="230" height="300" rx="8" fill="#2c3238" stroke="#454d56"/>
-  <text x="50" y="104" fill="#e3e6e8" font-size="17" font-weight="600">Plant</text>
-  <text x="50" y="132" fill="#b0b7be" font-size="13">Tennessee Eastman process</text>
-  <text x="50" y="152" fill="#b0b7be" font-size="13">(closed-loop simulation)</text>
-  <rect x="50" y="172" width="190" height="52" rx="5" fill="#363d44" stroke="#454d56"/>
-  <text x="64" y="194" fill="#e3e6e8" font-size="13">22 transmitters</text>
-  <text x="64" y="212" fill="#8a939c" font-size="12">flows, levels, P, T</text>
-  <rect x="50" y="236" width="190" height="52" rx="5" fill="#363d44" stroke="#454d56"/>
-  <text x="64" y="258" fill="#e3e6e8" font-size="13">DCS control loops</text>
-  <text x="64" y="276" fill="#8a939c" font-size="12">valves, setpoints</text>
-  <text x="50" y="316" fill="#8a939c" font-size="12">Trainer injects faults,</text>
-  <text x="50" y="334" fill="#8a939c" font-size="12">disturbances and attacks</text>
-  <text x="50" y="352" fill="#8a939c" font-size="12">(simulation only)</text>
+  <!-- 0: source -->
+  <rect class="key" x="20" y="40" width="190" height="230" rx="8"/>
+  <text class="h" x="36" y="68">Plant</text>
+  <text class="s" x="36" y="92">Tennessee Eastman,</text>
+  <text class="s" x="36" y="109">closed loop (sim/te_cli)</text>
+  <text class="m" x="36" y="137">22 transmitters</text>
+  <text class="m" x="36" y="155">9 valve outputs</text>
+  <text class="m" x="36" y="173">DCS setpoints</text>
+  <text class="m" x="36" y="201">one sample every</text>
+  <text class="m" x="36" y="219">3 plant minutes</text>
+  <text class="m" x="36" y="247">faults and attacks are</text>
+  <text class="m" x="36" y="263">injected here (simulation)</text>
 
-  <!-- Link -->
-  <line x1="262" y1="220" x2="338" y2="220" stroke="#8a939c" stroke-width="1.6" marker-end="url(#arr)"/>
-  <text x="300" y="196" fill="#b0b7be" font-size="12" text-anchor="middle">OPC UA</text>
-  <text x="300" y="246" fill="#8a939c" font-size="11" text-anchor="middle">encrypted,</text>
-  <text x="300" y="261" fill="#8a939c" font-size="11" text-anchor="middle">read-only</text>
+  <rect class="box" x="20" y="300" width="190" height="88" rx="8"/>
+  <text class="h" x="36" y="326">Transport</text>
+  <text class="m" x="36" y="348">OPC UA: SignAndEncrypt,</text>
+  <text class="m" x="36" y="364">certificates, read-only</text>
+  <text class="m" x="36" y="380">HMI: local subprocess</text>
+  <path class="ln" d="M115 270 V300"/>
+  <path class="ln" d="M210 344 H240" marker-end="url(#a)"/>
 
-  <!-- Guardian -->
-  <rect x="340" y="30" width="430" height="380" rx="8" fill="#2c3238" stroke="#9d7be6" stroke-width="1.6"/>
-  <text x="362" y="62" fill="#e3e6e8" font-size="17" font-weight="600">Guardian</text>
-  <text x="458" y="62" fill="#8a939c" font-size="12">runs every 3 plant minutes</text>
-  <g font-size="13">
-    <rect x="362" y="80" width="386" height="42" rx="5" fill="#363d44"/>
-    <text x="378" y="106" fill="#e3e6e8">Input validation</text>
-    <text x="732" y="106" fill="#8a939c" font-size="12" text-anchor="end">NaN, span, timestamps</text>
+  <!-- 1: validate -->
+  <rect class="box" x="244" y="40" width="200" height="348" rx="8"/>
+  <text class="n" x="260" y="66">1</text>
+  <text class="h" x="276" y="66">Validate, repair</text>
+  <text class="s" x="260" y="94">Schema, finite values,</text>
+  <text class="s" x="260" y="111">instrument span,</text>
+  <text class="s" x="260" y="128">timestamps</text>
+  <text class="m" x="260" y="160">Repaired per transmitter,</text>
+  <text class="m" x="260" y="176">past data only:</text>
+  <text class="m" x="260" y="196">missing: hold last valid</text>
+  <text class="m" x="260" y="214">off scale: clip to span</text>
+  <text class="m" x="260" y="246">Broken data or time</text>
+  <text class="m" x="260" y="262">raises channel</text>
+  <text class="code" x="260" y="280">V</text>
+  <path class="ln" d="M444 214 H474" marker-end="url(#a)"/>
 
-    <rect x="362" y="130" width="386" height="42" rx="5" fill="#363d44"/>
-    <text x="378" y="156" fill="#e3e6e8">Integrity checks</text>
-    <text x="732" y="156" fill="#8a939c" font-size="12" text-anchor="end">replay, multi-freeze</text>
+  <!-- 2: evidence channels -->
+  <text class="n" x="478" y="30">2</text>
+  <text class="h" x="494" y="30">Evidence channels</text>
+  <rect class="acc" x="478" y="40" width="270" height="104" rx="8"/>
+  <text class="h" x="494" y="64">Virtual sensor bank</text>
+  <text class="s" x="494" y="86">31 ridge models: each tag from all</text>
+  <text class="s" x="494" y="103">others, at lags 0 to 2</text>
+  <text class="m" x="494" y="125">EWMA residual (λ 0.2):</text>
+  <text class="code" x="652" y="125">R:tag  Q</text>
 
-    <rect x="362" y="180" width="386" height="42" rx="5" fill="#363d44"/>
-    <text x="378" y="206" fill="#e3e6e8">Instrument checks</text>
-    <text x="732" y="206" fill="#8a939c" font-size="12" text-anchor="end">flatline, noise</text>
+  <rect class="box" x="478" y="154" width="270" height="72" rx="8"/>
+  <text class="h" x="494" y="178">Instrument checks</text>
+  <text class="m" x="494" y="198">noise (60 min window)</text>
+  <text class="code" x="690" y="198">N:tag</text>
+  <text class="m" x="494" y="216">flatline (15 min window)</text>
+  <text class="code" x="690" y="216">F:tag</text>
 
-    <rect x="362" y="230" width="386" height="42" rx="5" fill="#3a3550" stroke="#9d7be6"/>
-    <text x="378" y="256" fill="#e3e6e8">Virtual sensor bank</text>
-    <text x="732" y="256" fill="#c9b6f5" font-size="12" text-anchor="end">31 ridge models</text>
+  <rect class="box" x="478" y="236" width="270" height="72" rx="8"/>
+  <text class="h" x="494" y="260">Integrity checks</text>
+  <text class="m" x="494" y="280">replay: a 15 min window</text>
+  <text class="m" x="494" y="297">repeats exactly</text>
+  <text class="code" x="690" y="280">P:tag</text>
 
-    <rect x="362" y="280" width="386" height="42" rx="5" fill="#363d44"/>
-    <text x="378" y="306" fill="#e3e6e8">Reconstruction test</text>
-    <text x="732" y="306" fill="#8a939c" font-size="12" text-anchor="end">+ setpoint context from the DCS</text>
+  <rect class="box" x="478" y="318" width="270" height="70" rx="8"/>
+  <text class="h" x="494" y="342">Operating envelope</text>
+  <text class="m" x="494" y="362">PCA, 90 % variance</text>
+  <text class="code" x="690" y="362">T2</text>
+  <text class="m" x="494" y="379">setpoint outside history</text>
+  <text class="code" x="690" y="379">ENV</text>
+  <path class="ln" d="M748 214 H778" marker-end="url(#a)"/>
 
-    <rect x="362" y="340" width="386" height="50" rx="5" fill="#23282d" stroke="#454d56"/>
-    <text x="378" y="361" fill="#e3e6e8" font-weight="600">Verdict</text>
-    <text x="378" y="380" fill="#b0b7be" font-size="11.5">which transmitter failed, or a process fault, regime change or attack</text>
-  </g>
+  <!-- 3: alarm -->
+  <rect class="box" x="782" y="130" width="150" height="168" rx="8"/>
+  <text class="n" x="798" y="156">3</text>
+  <text class="h" x="814" y="156">Alarm</text>
+  <text class="s" x="798" y="182">Any channel above</text>
+  <text class="s" x="798" y="199">its limit for 3</text>
+  <text class="s" x="798" y="216">samples (9 min)</text>
+  <text class="m" x="798" y="244">One limit per family,</text>
+  <text class="m" x="798" y="260">set for 0.25 false</text>
+  <text class="m" x="798" y="276">alarms/day (validation)</text>
+  <path class="ln" d="M932 214 H962" marker-end="url(#a)"/>
 
-  <!-- Outputs -->
-  <line x1="772" y1="220" x2="818" y2="220" stroke="#8a939c" stroke-width="1.6" marker-end="url(#arr)"/>
-  <g font-size="13">
-    <rect x="820" y="70" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
-    <text x="838" y="96" fill="#e3e6e8">Alarms</text>
-    <text x="838" y="116" fill="#8a939c" font-size="12">ISA-18.2 states, priorities</text>
-    <rect x="820" y="144" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
-    <text x="838" y="170" fill="#e3e6e8">Protected soft sensor</text>
-    <text x="838" y="190" fill="#8a939c" font-size="12">trusted, repaired or untrusted</text>
-    <rect x="820" y="218" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
-    <text x="838" y="244" fill="#e3e6e8">Audit log</text>
-    <text x="838" y="264" fill="#8a939c" font-size="12">HMAC hash chain, tamper-evident</text>
-    <rect x="820" y="292" width="250" height="62" rx="8" fill="#2c3238" stroke="#454d56"/>
-    <text x="838" y="318" fill="#e3e6e8">Live control room</text>
-    <text x="838" y="338" fill="#8a939c" font-size="12">ISA-101 style HMI, local only</text>
-  </g>
-  <text x="820" y="390" fill="#8a939c" font-size="12">Never writes to the control system.</text>
+  <!-- 4: diagnosis -->
+  <rect class="acc" x="966" y="40" width="214" height="348" rx="8"/>
+  <text class="n" x="982" y="66">4</text>
+  <text class="h" x="998" y="66">Diagnosis</text>
+  <text class="m" x="982" y="86">first rule that fires</text>
+  <text class="s" x="982" y="112">1  broken, replayed, or</text>
+  <text class="s" x="999" y="129">≥3 tags frozen at once</text>
+  <text class="m" x="999" y="146">integrity attack</text>
+  <text class="s" x="982" y="170">2  one tag flatlined</text>
+  <text class="m" x="999" y="187">sensor fault</text>
+  <text class="s" x="982" y="211">3  setpoint moved &lt; 2 h ago,</text>
+  <text class="s" x="999" y="228">or outside envelope</text>
+  <text class="m" x="999" y="245">regime change</text>
+  <text class="s" x="982" y="269">4  noise on one tag, ≥2× next</text>
+  <text class="m" x="999" y="286">sensor fault</text>
+  <text class="s" x="982" y="310">5  replacing one tag by its</text>
+  <text class="s" x="999" y="327">virtual value explains all</text>
+  <text class="m" x="999" y="344">sensor fault (that tag)</text>
+  <text class="s" x="982" y="368">6  otherwise</text>
+  <text class="m" x="1068" y="368">process fault</text>
+
+  <!-- onset vote -->
+  <rect class="key" x="782" y="318" width="150" height="70" rx="8"/>
+  <text class="m" x="798" y="340">Root cause is fixed</text>
+  <text class="m" x="798" y="356">in the first 18 min</text>
+  <text class="m" x="798" y="372">if ≥ 90 % agree</text>
+  <path class="ln" d="M932 353 H962" marker-end="url(#a)"/>
+
+  <!-- outputs -->
+  <path class="ln" d="M1073 388 V430 H200 V456" marker-end="url(#a)"/>
+  <path class="ln" d="M600 430 V456" marker-end="url(#a)"/>
+  <path class="ln" d="M1000 430 V456" marker-end="url(#a)"/>
+
+  <rect class="box" x="20" y="460" width="360" height="118" rx="8"/>
+  <text class="h" x="36" y="486">Protected soft sensor</text>
+  <text class="s" x="36" y="510">Product E estimate, analyzer dead time 15 min</text>
+  <text class="m" x="36" y="534">OK: raw inputs</text>
+  <text class="m" x="36" y="552">RECONSTRUCTED: faulty tag replaced by its virtual value</text>
+  <text class="m" x="36" y="570">UNTRUSTED: process moved or in-loop tag faulted</text>
+
+  <rect class="box" x="420" y="460" width="360" height="118" rx="8"/>
+  <text class="h" x="436" y="486">Alarm list and HMI</text>
+  <text class="s" x="436" y="510">ISA-18.2 states, four priorities</text>
+  <text class="m" x="436" y="534">integrity: critical, process: high,</text>
+  <text class="m" x="436" y="552">sensor: medium, regime: advisory</text>
+  <text class="m" x="436" y="570">ISA-101 style control room, local only</text>
+
+  <rect class="box" x="820" y="460" width="360" height="118" rx="8"/>
+  <text class="h" x="836" y="486">Audit log</text>
+  <text class="s" x="836" y="510">HMAC-SHA256 hash chain</text>
+  <text class="m" x="836" y="534">every alarm, diagnosis change and</text>
+  <text class="m" x="836" y="552">operator action; any edit, deletion or</text>
+  <text class="m" x="836" y="570">reordering breaks verification</text>
+
+  <text class="m" x="20" y="630">Guardian only reads. Nothing in this path writes to the control system.</text>
 </svg>

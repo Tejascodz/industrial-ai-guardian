@@ -14,7 +14,7 @@ import hmac
 import json
 import threading
 from collections import deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 GENESIS = "0" * 64
@@ -53,7 +53,7 @@ class AuditLog:
         with self.lock:
             body = {
                 "seq": self.seq,
-                "ts": (ts or datetime.now(timezone.utc)).isoformat(),
+                "ts": (ts or datetime.now(UTC)).isoformat(),
                 "event": event,
                 "prev": self.prev,
             }

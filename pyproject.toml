@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "httpx2>=2", "bandit>=1.7", "pip-audit>=2.7"]
+dev = ["pytest>=7", "httpx2>=2", "bandit>=1.7", "pip-audit>=2.7", "ruff>=0.16"]
 
 [tool.setuptools]
 packages = ["guardian", "dashboard"]
@@ -32,3 +32,15 @@ dashboard = ["static/*", "static/vendor/*", "static/fonts/*"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["sim", "dashboard/static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101"]  # assert is how pytest works
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S"]  # bandit runs on the shipped code; tests build fixtures freely

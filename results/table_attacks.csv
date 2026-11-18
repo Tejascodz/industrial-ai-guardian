@@ -1,0 +1,9 @@
+method,attack_types,runs,detected_k,detected,ci_low,ci_high,median_of_type_median_delay_min,recognised_as_attack_k,trips,trips_warned
+Limit checks,14,42,38,0.904762,0.779349,0.962338,33,0,19,17
+PCA + contributions,14,42,40,0.952381,0.842101,0.986842,30,0,19,17
+PCA + RBC,14,42,40,0.952381,0.842101,0.986842,30,0,19,17
+Guardian,14,42,42,1,0.916201,1,10.5,21,19,19
+Guardian w/o instrument checks,14,42,42,1,0.916201,1,10.5,18,19,19
+Guardian w/o setpoint context,14,42,42,1,0.916201,1,10.5,21,19,19
+Guardian w/o dynamics (static bank),14,42,42,1,0.916201,1,12,21,19,19
+Guardian w/o integrity layer,14,42,42,1,0.916201,1,10.5,0,19,19

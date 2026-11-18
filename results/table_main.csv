@@ -1,0 +1,25 @@
+method,metric,value,ci_low,ci_high,k,n
+Limit checks,false_alarms_per_day,0.258065,0.176516,0.36431,32,124
+Limit checks,detected,0.518939,0.45883,0.578505,137,264
+Limit checks,median_delay_h,1.6,1.1,2.45,,137
+Limit checks,correct_class,0.481752,0.399727,0.564772,66,137
+Limit checks,transmitter_named,0.328767,0.231945,0.44271,24,73
+Limit checks,trips_warned,0.8,0.583983,0.919342,16,20
+PCA + contributions,false_alarms_per_day,0.274194,0.189887,0.383158,34,124
+PCA + contributions,detected,0.55303,0.492723,0.611816,146,264
+PCA + contributions,median_delay_h,1.6,1,2.35,,146
+PCA + contributions,correct_class,0.390411,0.315059,0.471382,57,146
+PCA + contributions,transmitter_named,0.306818,0.220235,0.409562,27,88
+PCA + contributions,trips_warned,0.8,0.583983,0.919342,16,20
+PCA + RBC,false_alarms_per_day,0.274194,0.189887,0.383158,34,124
+PCA + RBC,detected,0.55303,0.492723,0.611816,146,264
+PCA + RBC,median_delay_h,1.6,1,2.35,,146
+PCA + RBC,correct_class,0.452055,0.373586,0.532982,66,146
+PCA + RBC,transmitter_named,0.306818,0.220235,0.409562,27,88
+PCA + RBC,trips_warned,0.8,0.583983,0.919342,16,20
+Guardian,false_alarms_per_day,0.290323,0.203338,0.401929,36,124
+Guardian,detected,0.943182,0.908383,0.965269,249,264
+Guardian,median_delay_h,0.3,0.25,0.35,,249
+Guardian,correct_class,0.823293,0.771111,0.865651,205,249
+Guardian,transmitter_named,0.789474,0.722351,0.843877,135,171
+Guardian,trips_warned,1,0.838875,1,20,20

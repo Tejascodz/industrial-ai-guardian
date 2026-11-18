@@ -23,7 +23,6 @@ from .features import Scaler
 from .methods import Guardian
 from .monitors import PCAMonitor
 
-
 EXPECTED_FILES = {"arrays.npz", "config.json"}
 
 

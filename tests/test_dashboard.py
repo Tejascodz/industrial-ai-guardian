@@ -67,7 +67,8 @@ def test_websocket_refuses_wrong_token(client):
 
 def test_websocket_refuses_foreign_origin(client):
     with pytest.raises(WebSocketDisconnect) as e:
-        with client.websocket_connect("/ws?token=secret-token", headers={"origin": "http://evil.example", "host": "127.0.0.1:8050"}) as ws:
+        evil = {"origin": "http://evil.example", "host": "127.0.0.1:8050"}
+        with client.websocket_connect("/ws?token=secret-token", headers=evil) as ws:
             ws.receive_text()
     assert e.value.code == 1008
 

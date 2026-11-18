@@ -48,7 +48,7 @@ class Scaler:
     def __init__(self, cols: list[str] = MONITORED):
         self.cols = cols
 
-    def fit(self, df: pd.DataFrame) -> "Scaler":
+    def fit(self, df: pd.DataFrame) -> Scaler:
         self.mean = df[self.cols].mean().to_numpy()
         self.std = df[self.cols].std().to_numpy() + 1e-12
         return self

@@ -23,8 +23,7 @@ import pandas as pd
 from asyncua import Client, Server, ua
 from asyncua.crypto import cert_gen, permission_rules
 from asyncua.crypto.permission_rules import PermissionRuleset, User, UserRole
-from asyncua.crypto.security_policies import (SecurityPolicyAes256Sha256RsaPss,
-                                              SecurityPolicyBasic256Sha256)
+from asyncua.crypto.security_policies import SecurityPolicyAes256Sha256RsaPss, SecurityPolicyBasic256Sha256
 from asyncua.server.user_managers import CertificateUserManager
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
@@ -140,7 +139,7 @@ class SecureReadOnlyClient:
     def __init__(self, endpoint: str, identity: Identity, server_cert: Path, tags: list[str]):
         self.endpoint, self.identity, self.server_cert, self.tags = endpoint, identity, server_cert, tags
 
-    async def __aenter__(self) -> "SecureReadOnlyClient":
+    async def __aenter__(self) -> SecureReadOnlyClient:
         self._client = Client(self.endpoint, timeout=10)
         self._client.application_uri = self.identity.uri
         await self._client.set_security(
@@ -160,7 +159,7 @@ class SecureReadOnlyClient:
     async def read_snapshot(self) -> dict[str, float]:
         names = list(self._nodes)
         values = await self._client.read_values([self._nodes[n] for n in names])
-        return dict(zip(names, map(float, values)))
+        return dict(zip(names, map(float, values), strict=True))
 
 
 __all__ = ["make_identity", "PlantServer", "SecureReadOnlyClient", "ReadOnlyRuleset",

@@ -1,0 +1,16 @@
+scenario,true_class,true_tag,fault_kind,idv
+test_sf_xmeas_12_drift_0,sensor_fault,xmeas_12,drift,
+test_sf_xmeas_15_drift_0,sensor_fault,xmeas_15,drift,
+test_sf_xmeas_18_stuck_0,sensor_fault,xmeas_18,stuck,
+test_sf_xmeas_12_drift_1,sensor_fault,xmeas_12,drift,
+test_sf_xmeas_15_drift_1,sensor_fault,xmeas_15,drift,
+test_idv5_0,process_fault,,,5
+test_idv12_0,process_fault,,,12
+test_idv16_0,process_fault,,,16
+test_idv5_1,process_fault,,,5
+test_idv12_1,process_fault,,,12
+test_idv16_1,process_fault,,,16
+test_idv5_2,process_fault,,,5
+test_idv16_2,process_fault,,,16
+test_idv12_3,process_fault,,,12
+test_idv16_3,process_fault,,,16

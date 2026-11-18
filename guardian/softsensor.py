@@ -28,7 +28,7 @@ class SoftSensor:
     def __init__(self, lags: int = 2, alpha: float = 1.0, target: str = TARGET):
         self.lags, self.alpha, self.target = lags, alpha, target
 
-    def fit(self, train_runs: list[pd.DataFrame], scaler: Scaler | None = None) -> "SoftSensor":
+    def fit(self, train_runs: list[pd.DataFrame], scaler: Scaler | None = None) -> SoftSensor:
         self.scaler = scaler or Scaler(MONITORED).fit(pd.concat(train_runs))
         Z, y = [], []
         for r in train_runs:

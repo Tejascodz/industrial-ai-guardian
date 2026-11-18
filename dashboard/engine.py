@@ -13,7 +13,7 @@ because this is a simulator: Guardian itself never writes to a plant.
 from __future__ import annotations
 
 import math
-import subprocess  # nosec B404 - only runs the bundled simulator binary
+import subprocess  # nosec B404
 import threading
 from collections import deque
 from dataclasses import dataclass, field
@@ -148,7 +148,8 @@ class LiveSession:
         with self.lock:
             self.stop()
             self.seed = seed
-            self.proc = subprocess.Popen(  # nosec B603 - bundled binary, fixed arguments
+            # Fixed binary, no shell, typed arguments.
+            self.proc = subprocess.Popen(  # noqa: S603  # nosec B603
                 [str(BINARY), "--interactive", "--seed", str(seed)], stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, text=True, bufsize=1)
             self.columns = self.proc.stdout.readline().strip().split(",")
@@ -183,7 +184,7 @@ class LiveSession:
 
     def _append(self, line: str) -> dict:
         vals = np.array(line.split(","), dtype=float)
-        row = dict(zip(self.columns, vals))
+        row = dict(zip(self.columns, vals, strict=True))  # a short line is a broken simulator
         for s in SP_NAMES:
             row[f"sp_{s}"] = self.sp[s]
         self.rows.append(row)
