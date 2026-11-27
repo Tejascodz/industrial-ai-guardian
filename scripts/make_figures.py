@@ -192,9 +192,48 @@ def confusion() -> None:
     plt.close(fig)
 
 
+def hai_bars() -> None:
+    """HAI hardware-in-the-loop results, from results/hai_summary.csv (scripts/run_hai.py)."""
+    t = pd.read_csv(RES / "hai_summary.csv")
+    order = ["Limit checks", "PCA + contributions", "PCA + RBC", "Guardian"]
+    metrics = [("attacks_detected", "Attacks detected on the HIL testbed", "of 50 labelled attacks"),
+               ("injected_detected", "Injected transmitter faults detected", "of 104 faults"),
+               ("injected_transmitter_named", "Faulty transmitter named", "of detected injected faults")]
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    w = 0.19
+    colors = ["#d0d7de", "#afb8c1", "#8c959f", BLUE]
+    for n, mth in enumerate(order):
+        r = t[t.method == mth].set_index("metric")
+        vals = np.array([r.loc[m, "value"] for m, _, _ in metrics])
+        lo = vals - np.array([r.loc[m, "ci_low"] for m, _, _ in metrics])
+        hi = np.array([r.loc[m, "ci_high"] for m, _, _ in metrics]) - vals
+        pos = np.arange(len(metrics)) + (n - 1.5) * w
+        ax.bar(pos, vals, w * 0.92, color=colors[n], label=mth, zorder=2)
+        ax.errorbar(pos, vals, yerr=[lo, hi], fmt="none", ecolor=INK, elinewidth=0.9, capsize=2.5, zorder=3)
+        for x_, v, h in zip(pos, vals, hi, strict=True):
+            ax.text(x_, v + h + 0.02, f"{v:.0%}", ha="center", fontsize=8.5, color=INK,
+                    fontweight="bold" if mth == "Guardian" else "normal")
+    ax.set_xticks(np.arange(len(metrics)), [f"{a}\n{b}" for _, a, b in metrics], fontsize=9.5)
+    ax.set_ylim(0, 1.12)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
+    ax.grid(axis="x", visible=False)
+    fa = t[t.metric == "attack_false_alarms_per_day"].set_index("method").loc[order, "value"]
+    ax.set_title("HAI 21.03 hardware-in-the-loop testbed, method unchanged from Tennessee Eastman",
+                 loc="left", fontsize=12, fontweight="bold", pad=22)
+    short = {"Limit checks": "limits", "PCA + contributions": "PCA", "PCA + RBC": "PCA+RBC", "Guardian": "Guardian"}
+    ax.text(0, 1.035, "False alarms per day on test (target 0.25): "
+            + ", ".join(f"{short[m]} {v:.2f}" for m, v in fa.items()) + ". Error bars: 95 % intervals.",
+            transform=ax.transAxes, fontsize=9, color=MUTED)
+    ax.legend(ncol=4, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fig.tight_layout()
+    fig.savefig(FIG / "hai_results.png", dpi=200, facecolor="white")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     FIG.mkdir(parents=True, exist_ok=True)
     benchmark_bars()
+    hai_bars()
     confusion()
     g, lim, ss, test, tm = _fitted()
     loop_fault(g, lim, test, tm)

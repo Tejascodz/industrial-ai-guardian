@@ -17,14 +17,13 @@ import numpy as np
 import pandas as pd
 
 from .bank import VirtualSensorBank
-from .features import SP_NAMES, Scaler, ewma
+from .features import Scaler, ewma
 from .monitors import PCAMonitor
+from .plant import TE, Plant
 from .scenarios import ENVELOPE
 from .sim import INTEGRITY, NORMAL, PROCESS, REGIME, SENSOR
-from .tags import FIELD_TAGS, MONITORED
 
 LAMBDA = 0.2  # EWMA weight, shared by all methods
-FIELD_IDX = [MONITORED.index(t) for t in FIELD_TAGS]
 
 
 @dataclass
@@ -37,9 +36,18 @@ class Analysis:
 
 class Method:
     name = "method"
+    plant: Plant = TE
+
+    def __init__(self, plant: Plant | None = None):
+        if plant is not None:
+            self.plant = plant
+
+    @property
+    def tags(self) -> list[str]:
+        return list(self.plant.monitored)
 
     def fit(self, train_runs: list[pd.DataFrame], val_normal_runs: list[pd.DataFrame]) -> Method:
-        self.scaler = Scaler(MONITORED).fit(pd.concat(train_runs))
+        self.scaler = Scaler(self.tags).fit(pd.concat(train_runs))
         return self
 
     def analyze(self, run: pd.DataFrame) -> Analysis:
@@ -57,13 +65,13 @@ class LimitChecks(Method):
 
     def analyze(self, run):
         z = ewma(self.scaler.transform(run), LAMBDA)
-        return Analysis(np.abs(z), [f"L:{t}" for t in MONITORED])
+        return Analysis(np.abs(z), [f"L:{t}" for t in self.tags])
 
     def diagnose(self, a, i, limits):
         hot = np.flatnonzero(a.S[i] > limits)
-        hot_field = [h for h in hot if h in FIELD_IDX]
+        hot_field = [h for h in hot if h in self.plant.field_idx]
         if len(hot) == 1 and hot_field:
-            return SENSOR, MONITORED[hot_field[0]]
+            return SENSOR, self.tags[hot_field[0]]
         return PROCESS, None
 
 
@@ -89,8 +97,8 @@ class PCAContrib(Method):
         if spe_hot:
             c = a.extra["contrib"][i]
             j = int(np.argmax(c))
-            if j in FIELD_IDX and c[j] / c.sum() > self.share:
-                return SENSOR, MONITORED[j]
+            if j in self.plant.field_idx and c[j] / c.sum() > self.share:
+                return SENSOR, self.tags[j]
             return PROCESS, None
         return (REGIME, None) if t2_hot else (NORMAL, None)
 
@@ -102,10 +110,11 @@ class PCARBC(PCAContrib):
         t2_hot, spe_hot = a.S[i] > limits
         if spe_hot:
             rbc = a.extra["rbc"][i]
-            j = FIELD_IDX[int(np.argmax(rbc[FIELD_IDX]))]
+            fi = self.plant.field_idx
+            j = fi[int(np.argmax(rbc[fi]))]
             # Reconstruction test: does removing sensor j explain the SPE?
             if a.extra["spe"][i] - rbc[j] <= limits[1]:
-                return SENSOR, MONITORED[j]
+                return SENSOR, self.tags[j]
             return PROCESS, None
         return (REGIME, None) if t2_hot else (NORMAL, None)
 
@@ -142,7 +151,7 @@ class Guardian(Method):
     """
 
     name = "Guardian"
-    recent_sp_h = 2.0
+    recent_sp_samples = 40  # a setpoint move this recent explains the alarm (2 h on TE)
     onset_window = 6  # samples (18 min) in which the root cause is identified
     onset_majority = 0.9  # share of onset samples that must agree on one sensor
     explain_tol = 1.0  # residuals left after reconstruction, relative to their limits
@@ -152,7 +161,9 @@ class Guardian(Method):
     freeze_min_tags = 3  # simultaneous flatlines that indicate a link failure / DoS
 
     def __init__(self, lags: int = 2, use_instrument: bool = True,
-                 use_setpoints: bool = True, use_integrity: bool = True, name: str | None = None):
+                 use_setpoints: bool = True, use_integrity: bool = True, name: str | None = None,
+                 plant: Plant | None = None):
+        super().__init__(plant)
         self.lags = lags
         self.use_instrument = use_instrument
         self.use_setpoints = use_setpoints
@@ -163,14 +174,16 @@ class Guardian(Method):
     def fit(self, train_runs, val_normal_runs):
         super().fit(train_runs, val_normal_runs)
         xs = [self.scaler.transform(r) for r in train_runs]
-        self.bank = VirtualSensorBank(len(MONITORED), self.lags).fit(xs)
+        self.bank = VirtualSensorBank(len(self.tags), self.lags).fit(xs)
         self.bank.calibrate([self.scaler.transform(r) for r in val_normal_runs])
         self.pca = PCAMonitor().fit(np.vstack([ewma(x, LAMBDA) for x in xs]))
-        d = np.vstack([np.diff(x[:, FIELD_IDX], axis=0) for x in xs])
+        fi = self.plant.field_idx
+        d = np.vstack([np.diff(x[:, fi], axis=0) for x in xs])
         self.diff_std = d.std(axis=0) + 1e-12
         # Setpoint envelope seen in the normal history (the validated range).
-        sp = pd.concat(train_runs)[[f"sp_{n}" for n in SP_NAMES]]
-        self.sp_lo, self.sp_hi = sp.min().to_numpy(), sp.max().to_numpy()
+        if self.plant.setpoints:
+            sp = pd.concat(train_runs)[list(self.plant.setpoints)]
+            self.sp_lo, self.sp_hi = sp.min().to_numpy(), sp.max().to_numpy()
         return self
 
     # ----- per-run analysis -------------------------------------------------
@@ -207,32 +220,35 @@ class Guardian(Method):
         from .validation import sanitize, validate
 
         blocks: list[tuple[str, list[str], np.ndarray]] = []
-        report = validate(run)
-        run = sanitize(run, report, fallback=dict(zip(self.scaler.cols, self.scaler.mean, strict=True)))
+        pl = self.plant
+        report = validate(run, self.tags, pl.sample_period_h, spans=pl.spans)
+        run = sanitize(run, report, self.tags, fallback=dict(zip(self.scaler.cols, self.scaler.mean, strict=True)),
+                       spans=pl.spans)
+        fi, field_tags = pl.field_idx, list(pl.field)
         if self.use_integrity:
             blocks.append(("V", ["V"], report.pipeline_bad[:, None].astype(float)))
 
         x = self.scaler.transform(run)
         z = self.bank.residuals(x)
         R = ewma(z, LAMBDA) ** 2
-        blocks.append(("R", [f"R:{t}" for t in MONITORED], R))
+        blocks.append(("R", [f"R:{t}" for t in self.tags], R))
         blocks.append(("Q", ["Q"], R.sum(axis=1, keepdims=True)))
         if self.use_instrument:
             # High-frequency content of the residual: steps and slow drifts in
             # the process do not raise it, a noisy transmitter does.
-            dz = np.diff(z[:, FIELD_IDX], axis=0, prepend=z[:1, FIELD_IDX])
-            blocks.append(("N", [f"N:{t}" for t in FIELD_TAGS], self._rolling_std(dz, self.noise_win)))
-            dx = np.diff(x[:, FIELD_IDX], axis=0, prepend=x[:1, FIELD_IDX])
+            dz = np.diff(z[:, fi], axis=0, prepend=z[:1, fi])
+            blocks.append(("N", [f"N:{t}" for t in field_tags], self._rolling_std(dz, self.noise_win)))
+            dx = np.diff(x[:, fi], axis=0, prepend=x[:1, fi])
             dstd = self._rolling_std(dx, self.flat_win)
-            blocks.append(("F", [f"F:{t}" for t in FIELD_TAGS],
+            blocks.append(("F", [f"F:{t}" for t in field_tags],
                            self.diff_std / (dstd + 1e-3 * self.diff_std)))
         if self.use_integrity:
-            blocks.append(("P", [f"P:{t}" for t in FIELD_TAGS], self._replay_score(run[FIELD_TAGS].to_numpy())))
+            blocks.append(("P", [f"P:{t}" for t in field_tags], self._replay_score(run[field_tags].to_numpy())))
         blocks.append(("T2", ["T2"], self.pca.stats(ewma(x, LAMBDA))["t2"][:, None]))
 
         extra = {"time": run["time"].to_numpy(), "R": R, "validation": report}
-        if self.use_setpoints:
-            sp = run[[f"sp_{s}" for s in SP_NAMES]].to_numpy()
+        if self.use_setpoints and pl.setpoints:
+            sp = run[list(pl.setpoints)].to_numpy()
             changed = np.r_[False, np.any(np.diff(sp, axis=0) != 0, axis=1)]
             extra["sp_change_times"] = extra["time"][changed]
             tol = 0.05 * (self.sp_hi - self.sp_lo) + 0.002 * np.abs(self.sp_hi)
@@ -242,8 +258,8 @@ class Guardian(Method):
 
         # Reconstruction hypotheses, one per field tag: smoothed residuals of
         # every tag after replacing tag k by its virtual sensor.
-        recon = np.empty((len(FIELD_IDX),) + R.shape)
-        for n, k in enumerate(FIELD_IDX):
+        recon = np.empty((len(fi),) + R.shape)
+        for n, k in enumerate(fi):
             _, zk = self.bank.reconstruct(x, k)
             recon[n] = ewma(zk, LAMBDA) ** 2
         extra["recon"] = recon
@@ -292,26 +308,27 @@ class Guardian(Method):
         if "F" in ix:
             flat = self._ratio(a, i, hot, lim, ix["F"])
             if flat.max() > 0:  # a live process never produces a flat signal
-                return SENSOR, FIELD_TAGS[int(np.argmax(flat))]
+                return SENSOR, self.plant.field[int(np.argmax(flat))]
 
-        if self.use_setpoints:
+        if self.use_setpoints and self.plant.setpoints:
             t = a.extra["time"][i]
             recent = a.extra["sp_change_times"]
-            if a.extra["sp_outside"][i] or np.any((recent <= t) & (recent > t - self.recent_sp_h)):
+            window_h = self.recent_sp_samples * self.plant.sample_period_h
+            if a.extra["sp_outside"][i] or np.any((recent <= t) & (recent > t - window_h)):
                 return REGIME, None  # deviations are expected after an operator move
 
         if "N" in ix:
             noise = self._ratio(a, i, hot, lim, ix["N"])
             order = np.sort(noise)[::-1]
             if order[0] > 0 and order[0] >= 2.0 * order[1]:  # noise confined to one tag
-                return SENSOR, FIELD_TAGS[int(np.argmax(noise))]
+                return SENSOR, self.plant.field[int(np.argmax(noise))]
 
         r_lim, q_lim = lim[ix["R"]], lim[ix["Q"]][0]
         bank_hot = hot[i, ix["R"]].any() or hot[i, ix["Q"]].any()
         if bank_hot:
-            nM = len(MONITORED)
+            nM = len(self.tags)
             best, best_score = None, np.inf
-            for n, k in enumerate(FIELD_IDX):
+            for n, k in enumerate(self.plant.field_idx):
                 if a.extra["R"][i, k] <= r_lim[k]:
                     continue  # tag k is not itself anomalous
                 rk = a.extra["recon"][n, i]
@@ -320,9 +337,9 @@ class Guardian(Method):
                 if rest <= self.explain_tol and rest < best_score:
                     best, best_score = k, rest
             if best is not None:
-                return SENSOR, MONITORED[best]
+                return SENSOR, self.tags[best]
 
-        if self.use_setpoints:
+        if self.use_setpoints and self.plant.setpoints:
             return PROCESS, None
         # Without DCS context: fall back to the classical reading of T2-only alarms.
         others = np.ones(hot.shape[1], dtype=bool)
@@ -356,8 +373,8 @@ class Guardian(Method):
         if sensor_votes.count(tag) < self.onset_majority * len(votes):
             return now  # no consistent single-sensor explanation at onset
         ix = a.extra["idx"]
-        k = MONITORED.index(tag)
-        f = FIELD_TAGS.index(tag)
+        k = self.tags.index(tag)
+        f = list(self.plant.field).index(tag)
         still = hot[i, ix["R"]][k] or ("N" in ix and hot[i, ix["N"]][f]) or ("F" in ix and hot[i, ix["F"]][f])
         return (SENSOR, tag) if still else now
 

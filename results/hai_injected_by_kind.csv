@@ -1,0 +1,17 @@
+method,kind,runs,detected,named
+Limit checks,bias,26,7,2
+Limit checks,drift,26,13,1
+Limit checks,stuck,26,3,0
+Limit checks,noise,26,7,0
+PCA + contributions,bias,26,5,1
+PCA + contributions,drift,26,9,4
+PCA + contributions,stuck,26,1,0
+PCA + contributions,noise,26,0,0
+PCA + RBC,bias,26,5,1
+PCA + RBC,drift,26,9,4
+PCA + RBC,stuck,26,1,0
+PCA + RBC,noise,26,0,0
+Guardian,bias,26,21,12
+Guardian,drift,26,18,2
+Guardian,stuck,26,17,9
+Guardian,noise,26,21,8

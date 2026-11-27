@@ -74,7 +74,9 @@ class ValidationReport:
 
 
 def validate(df: pd.DataFrame, tags: list[str] = MONITORED,
-             period_h: float = SAMPLE_PERIOD_H, max_issues: int = 1000) -> ValidationReport:
+             period_h: float = SAMPLE_PERIOD_H, max_issues: int = 1000,
+             spans: dict[str, tuple[float, float]] | None = None) -> ValidationReport:
+    spans = SPANS if spans is None else spans
     missing = [t for t in ["time", *tags] if t not in df.columns]
     if missing:
         raise SchemaError(f"missing columns: {missing[:5]}{'...' if len(missing) > 5 else ''}")
@@ -100,7 +102,7 @@ def validate(df: pd.DataFrame, tags: list[str] = MONITORED,
     for j, t in enumerate(tags):
         v = X[:, j]
         flag(~np.isfinite(v), t, "not_finite")
-        lo, hi = SPANS.get(t, (-np.inf, np.inf))
+        lo, hi = spans.get(t, (-np.inf, np.inf))
         flag(np.isfinite(v) & ((v < lo) | (v > hi)), t, "out_of_span")
 
     flag(~np.isfinite(time), "time", "bad_timestamp")
@@ -111,7 +113,8 @@ def validate(df: pd.DataFrame, tags: list[str] = MONITORED,
 
 
 def sanitize(df: pd.DataFrame, report: ValidationReport, tags: list[str] = MONITORED,
-             fallback: dict[str, float] | None = None) -> pd.DataFrame:
+             fallback: dict[str, float] | None = None,
+             spans: dict[str, tuple[float, float]] | None = None) -> pd.DataFrame:
     """Repair invalid values so the models get finite input, one sensor at a time.
 
     * A value outside the instrument span is clipped to the span limit, the way
@@ -126,12 +129,13 @@ def sanitize(df: pd.DataFrame, report: ValidationReport, tags: list[str] = MONIT
 
     The samples stay flagged in the report, so repair never hides them.
     """
+    spans = SPANS if spans is None else spans
     out = df.copy()
     if report.ok:
         return out
     for t in tags:
         v = out[t].astype(float).to_numpy().copy()
-        lo, hi = SPANS.get(t, (-np.inf, np.inf))
+        lo, hi = spans.get(t, (-np.inf, np.inf))
         v[~np.isfinite(v)] = np.nan
         v = np.clip(v, lo, hi)  # NaN stays NaN
         col = pd.Series(v, index=out.index).ffill()

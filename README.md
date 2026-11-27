@@ -41,7 +41,7 @@ integrity attacks detected<br>
 </tr>
 </table>
 
-<sub>All results come from a simulation: the closed-loop Tennessee Eastman process (NIST TESIM port, Ricker decentralized control), not plant data. The 288 test runs use seeds that were generated after every design choice was frozen. Every method is calibrated to the same budget of 0.25 false alarms per day on a separate validation split. On the test split, Guardian's false-alarm rate is the highest of the four: 0.29 per day, against 0.26 to 0.27 for the baselines, with overlapping intervals. Everything runs on CPU, and the simulation is deterministic given its seeds. Guardian misses 15 events, and it reports bias and drift on flow and level transmitters inside control loops as process faults. Both are covered in [Limitations](#limitations).</sub>
+<sub>The figures above come from a simulation: the closed-loop Tennessee Eastman process (NIST TESIM port, Ricker decentralized control), not plant data. A second evaluation on recorded data from the HAI hardware-in-the-loop testbed, with the method unchanged, is in [Hardware-in-the-loop data](#hardware-in-the-loop-data-hai-2103); it is still not a real plant, and naming the faulty transmitter is much weaker there. The 288 test runs use seeds that were generated after every design choice was frozen. Every method is calibrated to the same budget of 0.25 false alarms per day on a separate validation split. On the test split, Guardian's false-alarm rate is the highest of the four: 0.29 per day, against 0.26 to 0.27 for the baselines, with overlapping intervals. Everything runs on CPU, and the simulation is deterministic given its seeds. Guardian misses 15 events, and it reports bias and drift on flow and level transmitters inside control loops as process faults. Both are covered in [Limitations](#limitations).</sub>
 
 ## Overview
 
@@ -53,7 +53,7 @@ A soft sensor estimates a quality variable that cannot be measured online from t
 - **Integrity checks.** Replayed data, several transmitters freezing at once, and broken values or timestamps raise an integrity alarm rather than a fault.
 - **Protected soft sensor.** While a transmitter outside a loop is faulty, the soft sensor runs on that tag's virtual value. Every estimate carries a status: OK, RECONSTRUCTED or UNTRUSTED.
 
-What ships: a Python library (`guardian`), a C++ plant simulator (`sim/te_cli`), a local live control room (`python -m dashboard`), a read-only OPC UA link (`scripts/opcua_demo.py`) and scripts that rebuild every result and figure in this README.
+What ships: a Python library (`guardian`), a C++ plant simulator (`sim/te_cli`), a local live control room (`python -m dashboard`), a read-only OPC UA link (`scripts/opcua_demo.py`), a loader for the HAI testbed data (`guardian/hai.py`) and scripts that rebuild every result and figure in this README. Guardian takes its tag list, field transmitters, setpoints and sample period from a plant description (`guardian/plant.py`), so the same code runs on both plants.
 
 ## Quickstart
 
@@ -256,6 +256,40 @@ Each row removes one part of Guardian. The p-values are exact McNemar tests agai
 - **Missed events.** Guardian misses 15 of 264 events (`results/guardian_misses.csv`): slow drifts on the separator and stripper level transmitters (4), one stuck stripper temperature transmitter, and the process disturbances IDV(5), (12) and (16) (10). Under this control strategy their effect on the monitored data stays within normal variation.
 - **Retired test split.** An earlier test split (seed base 50000) was run once during development. It exposed the threshold-generalization problem that led to family-wise limits. Because it had influenced a design choice, it was retired, and the results above come from a fresh split that was run once. On the retired split Guardian detected 93.6% of events.
 
+### Hardware-in-the-loop data: HAI 21.03
+
+To check that the method is not tuned to one simulator, it was run unchanged on [HAI 21.03](https://github.com/icsdataset/hai) (Shin et al., 2021), recorded from a hardware-in-the-loop testbed: three small physical processes (boiler, turbine and water treatment) under industrial controllers (Emerson Ovation, GE Mark VIe, Siemens S7-1500), coupled to a simulated steam-turbine power plant. Every Guardian setting is the one used on Tennessee Eastman; only the plant description (`guardian/hai.py`) is new. Windows are counted in samples, so at 10 s sampling they are 18 times shorter in time than on Tennessee Eastman.
+
+| | |
+|---|---|
+| Data | 1 s data averaged to 10 s. 31 field transmitters and 17 controller outputs monitored, 6 setpoints used as DCS context |
+| Fit and calibrate | Fit on `train1` and `train2` (176 h of normal operation). Alarm limits set on `train3` (80 h) for 0.25 false alarms per day |
+| Attacks | `test1` to `test5`, 112 h with 50 labelled attacks, timed against the dataset's published attack table. An attack counts as detected if an alarm starts between its first labelled sample and 10 min after its last; any other alarm is a false alarm |
+| Injected transmitter faults | Semi-synthetic: bias (4σ), drift (to 6σ over 1.5 h), stuck and noise (2σ) added to 3 h stretches of normal test data, 30 min or more away from any attack. σ is the transmitter's median standard deviation over 1 h of normal data. 13 transmitters outside every feedback loop × 4 kinds × 2 = 104 runs, seed 2103 |
+
+Results from `results/hai_summary.csv`, 95% intervals in brackets:
+
+| Method | False alarms / day on test | Attacks detected | Median delay | Injected faults detected | Transmitter named (of detected) | Wrong transmitter blamed |
+|---|---|---|---|---|---|---|
+| Limit checks | 8.8 (6.2–12.1) | 74% (60–84) | 50 s | 29% (21–38) | 10% (3–26) | 40% |
+| PCA + contributions | 0 (0–0.9) | 78% (65–87) | 50 s | 14% (9–22) | 33% (15–58) | 0% |
+| PCA + RBC | 0 (0–0.9) | 78% (65–87) | 50 s | 14% (9–22) | 33% (15–58) | 0% |
+| **Guardian** | 0.48 (0.06–1.72) | **90% (79–96)** | 40 s | **74% (65–82)** | 40% (30–51) | 2.6% |
+
+<p align="center">
+  <img src="docs/figures/hai_results.png" width="100%" alt="Grouped bar chart of the four methods on HAI 21.03. Attacks detected of 50: limit checks 74 percent, PCA with contributions 78, PCA with RBC 78, Guardian 90. Injected transmitter faults detected of 104: 29, 14, 14 and 74 percent. Faulty transmitter named of detected injected faults: 10, 33, 33 and 40 percent. Error bars show 95 percent intervals. False alarms per day on test: limits 8.81, PCA 0, PCA with RBC 0, Guardian 0.48, against a target of 0.25.">
+</p>
+
+What this shows, and what it does not:
+
+- **Detection carries over.** With no retuning, Guardian detects 45 of the 50 attacks and 77 of the 104 injected faults. The baselines detect 37 to 39 attacks and 15 to 30 injected faults.
+- **Naming the transmitter does not carry over well.** Guardian names the right transmitter in 31 of 77 detected injected faults (40%), against 79% on Tennessee Eastman. By kind: bias 12 of 21, stuck 9 of 17, noise 8 of 21, drift 2 of 18. Most of the rest are reported as process faults or regime changes, and only 2 blame the wrong transmitter. Three transmitters are rarely detected at all: P1_FCV03Z (1 of 8), P1_PIT02 and P4_ST_TT01 (3 of 8 each).
+- **False alarms are above target.** 2 false alarms in 4.2 days of test data, 0.48 per day against a target of 0.25; the interval is wide (0.06 to 1.72). The PCA baselines have none, but they also detect far fewer faults. Limit checks, calibrated the same way, give 8.8 per day.
+- **No HAI attack is recognised as an attack.** HAI's attacks change setpoints and controller outputs. Where an attack also hides a sensor, it does so on the operator's screen only: in the recorded data that sensor still reports the real process. Nothing in the data is replayed or frozen, so Guardian's integrity checks have nothing to find. It reports 30 of the 45 as process faults and blames a transmitter in 14 (31%), which here is a false blame. PCA with contributions does the same in 31% of its detections.
+- **Not a real plant, and not a contest score.** The rigs are real but the power plant is simulated. The injected faults are added to recorded data, so they only use transmitters outside feedback loops: a fault injected into a loop's own transmitter in recorded data would not make the controller react. Detection is scored per attack, not with the eTaPR metric that HAI recommends, so these numbers are not comparable to HAI contest results.
+
+HAI 21.03 is published under [CC BY-SA 4.0](https://github.com/icsdataset/hai#license) (the licence stated in the dataset's README) and is not redistributed here: `scripts/fetch_hai.py` downloads it from the dataset's repository at a pinned commit and checks every file's SHA-256 hash.
+
 ## Usage
 
 ### Commands
@@ -271,6 +305,8 @@ Each row removes one part of Guardian. The p-values are exact McNemar tests agai
 | `python scripts/make_figures.py` | Every figure in `docs/figures/` from `results/` and `data/` |
 | `python scripts/export_model.py [--out models/guardian]` | Fit, calibrate and save an HMAC-signed model (needs `GUARDIAN_KEY`) |
 | `python scripts/opcua_demo.py [--scenario NAME]` | Replay a test run over an encrypted, read-only OPC UA link into a signed model, with a verified audit log |
+| `python scripts/fetch_hai.py` | Download HAI 21.03 (about 180 MB) into `data/hai/` and verify its SHA-256 hashes |
+| `python scripts/run_hai.py` | Fit, calibrate and score every method on HAI 21.03 (`results/hai_*.csv`) |
 
 | Environment variable | Used by | Meaning |
 |---|---|---|
@@ -346,13 +382,17 @@ The browser and server talk over one WebSocket at `/ws?token=…`. Every message
 | Tennessee Eastman benchmarks ([Downs and Vogel, 1993](https://doi.org/10.1016/0098-1354%2893%2980018-I); [Ricker, 1996](https://doi.org/10.1016/0959-1524%2896%2900031-5); [Rieth et al., 2017](https://doi.org/10.7910/DVN/6C3JR1)) | The standard simulated plant and widely used fault datasets, which cover process disturbances (IDVs) | Guardian uses the same plant and control strategy, adds transmitter faults injected inside the loop, regime changes and attacks, and scores diagnosis as well as detection |
 | Replay attack detection ([Mo and Sinopoli, 2009](https://doi.org/10.1109/ALLERTON.2009.5394956)) | Detects replayed measurements by adding a small watermark to the control input | Guardian only reads, so it cannot add a watermark. Its exact-repetition check is weaker: replays with attacker noise get through it (see above) |
 | Attacks on the Tennessee Eastman process ([Krotofil and Cárdenas, 2013](https://doi.org/10.1007/978-3-642-41488-6_12)) | Studies how integrity and denial-of-service attacks on sensors affect the plant | Inspired the replay, freeze and stealthy-bias attack scenarios used here |
+| HAI dataset ([Shin et al., 2021](https://github.com/icsdataset/hai)) | Hardware-in-the-loop testbed data with labelled attacks on setpoints and controller outputs, for anomaly detection research | Used unchanged as a second benchmark. Guardian is scored on detection and on whether it falsely blames a transmitter, not with the dataset's eTaPR metric |
+| Process change, instrument fault and data-path corruption ([Klymenko, 2026](https://arxiv.org/abs/2610.18904)) | A preprint that separates the same three causes with a bank of classical detectors and deterministic attribution, evaluated on injected events and the SKAB rig data | The closest prior work found. Guardian differs in its cross-tag reconstruction test, DCS setpoint context and protected soft sensor, not in the idea of the three-way split |
+| Commercial predictive analytics, e.g. [AVEVA Predictive Analytics](https://www.aveva.com/en/perspectives/blog/predictive-analytics/) | Vendor material says it can flag bad sensors and exclude them from calculations and models | Bad-sensor handling exists in industry. Guardian is an open research prototype whose results can be rebuilt and checked, not a replacement for such products |
 
-Guardian does not introduce a new statistical method. Its contribution is the combination: per-tag virtual sensors with a reconstruction test, closed-loop and DCS context, integrity checks and a protected soft sensor, evaluated together against classical baselines on one benchmark.
+Guardian does not introduce a new statistical method. Its contribution is the combination: per-tag virtual sensors with a reconstruction test, closed-loop and DCS context, integrity checks and a protected soft sensor, evaluated together against classical baselines on a simulated plant and on hardware-in-the-loop data, with every result reproducible from this repository.
 
 ## Limitations
 
-- **Simulation only.** No plant data has been used. A real unit adds historian compression, missing data, maintenance periods, recalibrations and slow ageing. All of these are untested.
-- **One process, small scale.** 22 transmitters and 9 valves on one plant. Plants with hundreds of tags, or several units, are untested.
+- **No real plant data.** Results come from a simulation (Tennessee Eastman) and a hardware-in-the-loop testbed (HAI 21.03). Transmitter faults on HAI are injected into recorded data, outside feedback loops only. A real unit adds historian compression, missing data, maintenance periods, recalibrations and slow ageing. All of these are untested.
+- **Small scale.** 31 monitored tags on Tennessee Eastman and 48 on HAI. Plants with hundreds of tags, or several units, are untested.
+- **Transfer to a new plant.** On HAI, detection carried over but naming the faulty transmitter fell from 79% to 40% of detected faults, and false alarms ran at 0.48 per day against a target of 0.25 (see [Hardware-in-the-loop data](#hardware-in-the-loop-data-hai-2103)).
 - **Single faults.** Each event is one fault, disturbance or attack. Simultaneous faults are not evaluated.
 - **In-loop flow and level transmitters.** Bias and drift on these are mostly reported as process faults (see [What did not work](#what-did-not-work-or-is-not-significant)).
 - **Fixed models.** Guardian is fitted once on normal history. It does not adapt to slow plant changes, and retraining is manual.
@@ -369,6 +409,9 @@ python scripts/run_benchmark.py          # results/benchmark_*.csv, operating_cu
 python scripts/run_softsensor.py         # results/softsensor_*.csv
 python scripts/summarize_results.py      # results/table_*.csv, guardian_misses.csv
 python scripts/make_figures.py           # docs/figures/*.png
+
+python scripts/fetch_hai.py              # HAI 21.03 into data/hai/ (download, hash-checked)
+python scripts/run_hai.py                # results/hai_*.csv, about 1 minute on 2 cores
 ```
 
 `data/` is not committed. It is regenerated from seeds and is deterministic. `results/` is committed, so the tables and the hero chart can be checked without rerunning the simulation. CI runs `summarize_results.py` and fails if the committed tables change.
@@ -387,9 +430,10 @@ pip-audit -r requirements.txt
 `requirements.txt` pins the exact versions the results were produced with. `pyproject.toml` gives the supported ranges.
 
 ```text
-guardian/      library: simulator driver, scenarios, validation, virtual sensor bank,
-               methods (Guardian and baselines), evaluation, soft sensor, audit log,
-               signed artifacts, OPC UA client and server
+guardian/      library: plant descriptions, simulator driver, scenarios, validation,
+               virtual sensor bank, methods (Guardian and baselines), evaluation,
+               statistics, soft sensor, audit log, signed artifacts, OPC UA client
+               and server, HAI loader
 dashboard/     live control room: simulation engine, FastAPI + WebSocket server, static HMI
 sim/           C++ Tennessee Eastman simulator (NIST TESIM) and the te_cli driver
 scripts/       data generation, benchmark, soft sensor, tables, figures, model export, demos
@@ -454,6 +498,6 @@ Not covered: physics-aware attacks, OS hardening of the host, enterprise key man
 
 ## License and citation
 
-Released under the [MIT License](LICENSE). The Tennessee Eastman simulator in `sim/te/` is the NIST TESIM port ([usnistgov/tesim](https://github.com/usnistgov/tesim)), a work of the US Government that is not subject to copyright in the United States ([notice](sim/te/NIST_LICENSE.md)). The dashboard vendors [uPlot](https://github.com/leeoniya/uPlot) (MIT) and the Barlow typeface (SIL Open Font License); both licences ship next to the files in `dashboard/static/`.
+Released under the [MIT License](LICENSE). The Tennessee Eastman simulator in `sim/te/` is the NIST TESIM port ([usnistgov/tesim](https://github.com/usnistgov/tesim)), a work of the US Government that is not subject to copyright in the United States ([notice](sim/te/NIST_LICENSE.md)). The dashboard vendors [uPlot](https://github.com/leeoniya/uPlot) (MIT) and the Barlow typeface (SIL Open Font License); both licences ship next to the files in `dashboard/static/`. The HAI 21.03 dataset (National Security Research Institute, CC BY-SA 4.0) is downloaded by `scripts/fetch_hai.py`, not included; if you use it, cite H.-K. Shin, W. Lee, J.-H. Yun and B.-G. Min, "Two ICS Security Datasets and Anomaly Detection Contest on the HIL-based Augmented ICS Testbed", CSET '21, ACM, 2021, pp. 36–40.
 
 To cite this work, use the metadata in [CITATION.cff](CITATION.cff); GitHub shows it under "Cite this repository".

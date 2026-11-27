@@ -1,0 +1,53 @@
+method,metric,value,ci_low,ci_high,k,n
+Limit checks,attack_false_alarms_per_day,8.81317,6.20528,12.1478,37,4.2
+Limit checks,attacks_detected,0.74,0.604468,0.841285,37,50
+Limit checks,attack_median_delay_s,50,30,60,,37
+Limit checks,attacks_blamed_on_a_transmitter,0.135135,0.0591329,0.279774,5,37
+Limit checks,attack_class_integrity_attack,0,0,0.0940578,0,37
+Limit checks,attack_class_sensor_fault,0.135135,0.0591329,0.279774,5,37
+Limit checks,attack_class_process_fault,0.864865,0.720226,0.940867,32,37
+Limit checks,attack_class_regime_change,0,0,0.0940578,0,37
+Limit checks,attack_class_normal,0,0,0.0940578,0,37
+Limit checks,injected_detected,0.288462,0.210159,0.381835,30,104
+Limit checks,injected_median_delay_s,1660,1210,1900,,30
+Limit checks,injected_transmitter_named,0.1,0.0345999,0.256211,3,30
+Limit checks,injected_wrong_transmitter_blamed,0.4,0.245906,0.576796,12,30
+PCA + contributions,attack_false_alarms_per_day,0,0,0.878668,0,4.2
+PCA + contributions,attacks_detected,0.78,0.647585,0.872461,39,50
+PCA + contributions,attack_median_delay_s,50,40,60,,39
+PCA + contributions,attacks_blamed_on_a_transmitter,0.307692,0.185659,0.464213,12,39
+PCA + contributions,attack_class_integrity_attack,0,0,0.0896669,0,39
+PCA + contributions,attack_class_sensor_fault,0.307692,0.185659,0.464213,12,39
+PCA + contributions,attack_class_process_fault,0.692308,0.535787,0.814341,27,39
+PCA + contributions,attack_class_regime_change,0,0,0.0896669,0,39
+PCA + contributions,attack_class_normal,0,0,0.0896669,0,39
+PCA + contributions,injected_detected,0.144231,0.0893961,0.224411,15,104
+PCA + contributions,injected_median_delay_s,3770,2590,4550,,15
+PCA + contributions,injected_transmitter_named,0.333333,0.151763,0.582865,5,15
+PCA + contributions,injected_wrong_transmitter_blamed,0,0,0.203883,0,15
+PCA + RBC,attack_false_alarms_per_day,0,0,0.878668,0,4.2
+PCA + RBC,attacks_detected,0.78,0.647585,0.872461,39,50
+PCA + RBC,attack_median_delay_s,50,40,60,,39
+PCA + RBC,attacks_blamed_on_a_transmitter,0.102564,0.0406133,0.235789,4,39
+PCA + RBC,attack_class_integrity_attack,0,0,0.0896669,0,39
+PCA + RBC,attack_class_sensor_fault,0.102564,0.0406133,0.235789,4,39
+PCA + RBC,attack_class_process_fault,0.897436,0.764211,0.959387,35,39
+PCA + RBC,attack_class_regime_change,0,0,0.0896669,0,39
+PCA + RBC,attack_class_normal,0,0,0.0896669,0,39
+PCA + RBC,injected_detected,0.144231,0.0893961,0.224411,15,104
+PCA + RBC,injected_median_delay_s,3770,2590,4550,,15
+PCA + RBC,injected_transmitter_named,0.333333,0.151763,0.582865,5,15
+PCA + RBC,injected_wrong_transmitter_blamed,0,0,0.203883,0,15
+Guardian,attack_false_alarms_per_day,0.476387,0.0576927,1.72088,2,4.2
+Guardian,attacks_detected,0.9,0.786398,0.956524,45,50
+Guardian,attack_median_delay_s,40,30,50,,45
+Guardian,attacks_blamed_on_a_transmitter,0.311111,0.195287,0.456648,14,45
+Guardian,attack_class_integrity_attack,0,0,0.0786516,0,45
+Guardian,attack_class_sensor_fault,0.311111,0.195287,0.456648,14,45
+Guardian,attack_class_process_fault,0.666667,0.520705,0.786411,30,45
+Guardian,attack_class_regime_change,0.0222222,0.0039336,0.115667,1,45
+Guardian,attack_class_normal,0,0,0.0786516,0,45
+Guardian,injected_detected,0.740385,0.648634,0.81501,77,104
+Guardian,injected_median_delay_s,140,80,680,,77
+Guardian,injected_transmitter_named,0.402597,0.30022,0.514231,31,77
+Guardian,injected_wrong_transmitter_blamed,0.025974,0.00715216,0.0898458,2,77

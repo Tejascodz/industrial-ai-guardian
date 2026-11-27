@@ -86,22 +86,22 @@ def limits_at(q: float, pool: np.ndarray, channels: list[str]) -> np.ndarray:
     return lim
 
 
-def false_alarms_per_day(prep: list[Prepared], limits: np.ndarray) -> float:
+def false_alarms_per_day(prep: list[Prepared], limits: np.ndarray, sample_h: float = SAMPLE_H) -> float:
     n, hours = 0, 0.0
     for p in prep:
         alarm = persisted((p.a.S > limits).any(axis=1))
         n += onsets(alarm, p.normal_mask)
-        hours += p.normal_mask.sum() * SAMPLE_H
+        hours += p.normal_mask.sum() * sample_h
     return 24.0 * n / max(hours, 1e-9)
 
 
-def calibrate(val: list[Prepared], target_fa_per_day: float) -> tuple[np.ndarray, float]:
+def calibrate(val: list[Prepared], target_fa_per_day: float, sample_h: float = SAMPLE_H) -> tuple[np.ndarray, float]:
     pool = np.vstack([p.a.S[p.normal_mask] for p in val])
     channels = val[0].a.channels
     lo, hi = 0.99, 1.0
     for _ in range(30):  # bisection on the common quantile
         mid = 0.5 * (lo + hi)
-        if false_alarms_per_day(val, limits_at(mid, pool, channels)) > target_fa_per_day:
+        if false_alarms_per_day(val, limits_at(mid, pool, channels), sample_h) > target_fa_per_day:
             lo = mid
         else:
             hi = mid
