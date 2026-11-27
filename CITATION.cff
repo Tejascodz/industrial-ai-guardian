@@ -4,7 +4,7 @@ type: software
 title: "Industrial AI Guardian: fault and integrity monitoring for the transmitters behind industrial soft sensors"
 authors:
   - given-names: Tejas
-version: 0.1.0
+version: 0.2.0
 license: MIT
 repository-code: "https://github.com/Tejascodz/industrial-ai-guardian"
 abstract: >-
@@ -12,9 +12,11 @@ abstract: >-
   apart from process faults, operating-regime changes and data-integrity
   attacks in a closed-loop process, and keeps a soft-sensor estimate usable
   while a transmitter is faulty. It combines a bank of per-tag virtual
-  sensors with a reconstruction test, instrument and integrity checks and
-  DCS setpoint context, and is benchmarked against limit checks and PCA
-  baselines on a closed-loop Tennessee Eastman simulation.
+  sensors with a reconstruction test, closed-loop fault signatures,
+  instrument and integrity checks and DCS setpoint context, and is
+  benchmarked against limit checks and PCA baselines on a closed-loop
+  Tennessee Eastman simulation and on the HAI 21.03 hardware-in-the-loop
+  dataset.
 keywords:
   - process monitoring
   - fault detection and diagnosis

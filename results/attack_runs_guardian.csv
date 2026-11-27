@@ -40,4 +40,4 @@ test_atk_stripper_product_jit_2,integrity_attack,,,,replay_stripper_product_jitt
 test_atk_all_transmitters_2,integrity_attack,,,,replay_all_transmitters,12.0,0,8.0,True,0.09999999999999964,14.5305,sensor_fault,xmeas_10,integrity_attack,
 test_atk_all_transmitters_jit_2,integrity_attack,,,,replay_all_transmitters_jitter,12.0,0,8.0,True,0.09999999999999964,14.239,process_fault,,process_fault,
 test_atk_freeze_2,integrity_attack,,,,multi_freeze,12.0,0,8.0,True,0.3000000000000007,22.8787,integrity_attack,,integrity_attack,
-test_atk_stealth_2,integrity_attack,,,,stealthy_coordinated_bias,12.0,0,8.0,True,0.6500000000000004,,sensor_fault,xmeas_21,process_fault,
+test_atk_stealth_2,integrity_attack,,,,stealthy_coordinated_bias,12.0,0,8.0,True,0.6500000000000004,,sensor_fault,xmeas_21,sensor_fault,xmeas_9

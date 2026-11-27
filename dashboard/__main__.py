@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 from guardian import artifacts  # noqa: E402
 from guardian.audit import AuditLog  # noqa: E402
 from guardian.evaluate import calibrate, prepare  # noqa: E402
-from guardian.features import DATA, load_split, runs  # noqa: E402
+from guardian.features import DATA, load_split, runs, signature_runs  # noqa: E402
 from guardian.methods import Guardian  # noqa: E402
 from guardian.sim import BINARY, NORMAL  # noqa: E402
 from guardian.softsensor import SoftSensor  # noqa: E402
@@ -46,6 +46,7 @@ def load_models(key: bytes | None):
         val, vm = load_split("val")
         vr = list(runs(val))
         g = Guardian().fit(train_runs, [r for n, r in vr if vm[n]["event_class"] == NORMAL])
+        g.fit_signatures(signature_runs())
         limits, _ = calibrate(prepare(g, vr, vm), 0.25)
     ss = SoftSensor().fit(train_runs, scaler=g.scaler)
     return g, limits, ss

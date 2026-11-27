@@ -76,6 +76,15 @@ def ewma(z: np.ndarray, lam: float) -> np.ndarray:
     return out
 
 
+def signature_runs() -> list[tuple[pd.DataFrame, str, float]]:
+    """(run, faulty tag, fault start) for every run of the simulated in-loop
+    fault split, for Guardian.fit_signatures. Empty if the split was not generated."""
+    if not (DATA / "sig.parquet").exists():
+        return []
+    df, meta = load_split("sig")
+    return [(r, meta[n]["sensor_fault"]["tag"], meta[n]["sensor_fault"]["t"]) for n, r in runs(df)]
+
+
 def runs(df: pd.DataFrame):
     """Iterate over (scenario name, run DataFrame) preserving order."""
     for name, g in df.groupby("scenario", sort=False):

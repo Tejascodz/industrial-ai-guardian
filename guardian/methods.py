@@ -145,7 +145,10 @@ class Guardian(Method):
       4. noise confined to one field tag                 -> sensor fault
       5. reconstructing one field tag explains all other
          residuals and that tag is itself anomalous      -> sensor fault
-      6. otherwise                                       -> process fault
+      6. the residuals match the closed-loop fault subspace
+         of one in-loop transmitter, clearly better than
+         any other (needs fit_signatures)                -> sensor fault
+      7. otherwise                                       -> process fault
     A sensor diagnosis made at the start of an alarm is kept while that
     sensor stays anomalous (see diagnose()).
     """
@@ -159,11 +162,19 @@ class Guardian(Method):
     flat_win = 5
     replay_win = 5  # samples (15 min) compared for exact repetition
     freeze_min_tags = 3  # simultaneous flatlines that indicate a link failure / DoS
+    # Closed-loop fault signatures (rule 6), learned from simulated in-loop faults.
+    sig_hours = 4.0  # hours after fault onset used to learn a signature
+    sig_energy = 0.9  # share of signature energy kept ...
+    sig_max_dim = 2  # ... in at most this many directions per transmitter
+    sig_tol = 1.0  # residuals left after projection, relative to their limits
+    sig_margin = 2.0  # the runner-up must leave at least this much more
 
     def __init__(self, lags: int = 2, use_instrument: bool = True,
                  use_setpoints: bool = True, use_integrity: bool = True, name: str | None = None,
-                 plant: Plant | None = None):
+                 plant: Plant | None = None, use_signatures: bool = True):
         super().__init__(plant)
+        self.use_signatures = use_signatures
+        self.signatures: dict[str, np.ndarray] = {}
         self.lags = lags
         self.use_instrument = use_instrument
         self.use_setpoints = use_setpoints
@@ -184,6 +195,41 @@ class Guardian(Method):
         if self.plant.setpoints:
             sp = pd.concat(train_runs)[list(self.plant.setpoints)]
             self.sp_lo, self.sp_hi = sp.min().to_numpy(), sp.max().to_numpy()
+        return self
+
+    def fit_signatures(self, fault_runs: list[tuple[pd.DataFrame, str, float]]) -> Guardian:
+        """Learn how the closed loop reacts to a fault on each in-loop transmitter.
+
+        fault_runs holds (run, faulty tag, fault start time) from a dynamic
+        simulator of the plant: bias and drift on transmitters inside control
+        loops. In closed loop the controller moves the real process, so the
+        fault shows up on other tags along a direction that the per-tag models
+        cannot predict. The smoothed residual vectors of each transmitter's
+        runs, while clearly abnormal, are normalised and reduced by SVD to a
+        fault subspace of at most sig_max_dim directions; the residuals are
+        then reconstructed along that subspace (multidimensional fault
+        reconstruction, Dunia and Qin, 1998).
+        Without a simulator, skip this step: rule 6 is then never used.
+        """
+        by_tag: dict[str, list[np.ndarray]] = {}
+        for run, tag, t0 in fault_runs:
+            a = self.analyze(run)
+            t, Z = a.extra["time"], a.extra["Z"]
+            before = (t >= t0 - 8.0) & (t < t0)
+            after = (t >= t0) & (t < t0 + self.sig_hours)
+            floor = 2.0 * np.quantile(np.linalg.norm(Z[before], axis=1), 0.99)
+            Za = Z[after]
+            norm = np.linalg.norm(Za, axis=1)
+            by_tag.setdefault(tag, []).append(Za[norm > floor] / norm[norm > floor, None])
+        self.signatures = {}
+        for tag, parts in by_tag.items():
+            A = np.vstack(parts)
+            if len(A) < 10:
+                continue  # the fault barely shows on the residuals: nothing to learn
+            _, sv, vt = np.linalg.svd(A, full_matrices=False)
+            energy = np.cumsum(sv ** 2) / np.sum(sv ** 2)
+            dim = min(int(np.searchsorted(energy, self.sig_energy)) + 1, self.sig_max_dim)
+            self.signatures[tag] = vt[:dim].T
         return self
 
     # ----- per-run analysis -------------------------------------------------
@@ -230,7 +276,8 @@ class Guardian(Method):
 
         x = self.scaler.transform(run)
         z = self.bank.residuals(x)
-        R = ewma(z, LAMBDA) ** 2
+        Z = ewma(z, LAMBDA)
+        R = Z ** 2
         blocks.append(("R", [f"R:{t}" for t in self.tags], R))
         blocks.append(("Q", ["Q"], R.sum(axis=1, keepdims=True)))
         if self.use_instrument:
@@ -246,7 +293,7 @@ class Guardian(Method):
             blocks.append(("P", [f"P:{t}" for t in field_tags], self._replay_score(run[field_tags].to_numpy())))
         blocks.append(("T2", ["T2"], self.pca.stats(ewma(x, LAMBDA))["t2"][:, None]))
 
-        extra = {"time": run["time"].to_numpy(), "R": R, "validation": report}
+        extra = {"time": run["time"].to_numpy(), "R": R, "Z": Z, "validation": report}
         if self.use_setpoints and pl.setpoints:
             sp = run[list(pl.setpoints)].to_numpy()
             changed = np.r_[False, np.any(np.diff(sp, axis=0) != 0, axis=1)]
@@ -299,7 +346,26 @@ class Guardian(Method):
         k = self.freeze_min_tags
         return any(onsets[n + k - 1] - onsets[n] <= 1 for n in range(len(onsets) - k + 1))
 
-    def _instant(self, a, i, hot, lim):
+    def _signature(self, a, i, hot, lim):
+        """Rule 6: the in-loop transmitter whose fault subspace explains the residuals."""
+        ix = a.extra["idx"]
+        if "N" in ix and hot[i, ix["N"]].any():
+            return None  # signatures describe bias and drift, not noise
+        r_lim, q_lim = lim[ix["R"]], lim[ix["Q"]][0]
+        z, w = a.extra["Z"][i], 1.0 / np.sqrt(r_lim)
+        rest = {}
+        for tag, xi in self.signatures.items():
+            f, *_ = np.linalg.lstsq(xi * w[:, None], z * w, rcond=None)
+            r = (z - xi @ f) ** 2
+            rest[tag] = max(np.max(r / r_lim), r.sum() / q_lim)
+        order = sorted(rest, key=rest.get)
+        best = order[0]
+        runner_up = rest[order[1]] if len(order) > 1 else np.inf
+        if rest[best] <= self.sig_tol and runner_up > self.sig_margin * rest[best]:
+            return best
+        return None
+
+    def _instant(self, a, i, hot, lim, signatures: bool = True):
         """Diagnosis from the evidence at sample i alone."""
         ix = a.extra["idx"]
         if self._integrity(a, i, hot, lim):
@@ -338,6 +404,10 @@ class Guardian(Method):
                     best, best_score = k, rest
             if best is not None:
                 return SENSOR, self.tags[best]
+            if signatures and self.use_signatures and self.signatures:
+                tag = self._signature(a, i, hot, lim)
+                if tag is not None:
+                    return SENSOR, tag
 
         if self.use_setpoints and self.plant.setpoints:
             return PROCESS, None
@@ -364,8 +434,10 @@ class Guardian(Method):
         if any(self._integrity(a, s, hot, limits) for s in range(start, i + 1)):
             return INTEGRITY, None
         now = self._instant(a, i, hot, limits)
+        # Onset votes leave out rule 6: a signature describes the settled loop
+        # response, so it only decides the current verdict, never a locked one.
         window = range(start, min(i, start + self.onset_window) + 1)
-        votes = [self._instant(a, s, hot, limits) for s in window]
+        votes = [self._instant(a, s, hot, limits, signatures=False) for s in window]
         sensor_votes = [tag for cls, tag in votes if cls == SENSOR]
         if not sensor_votes:
             return now
@@ -389,6 +461,7 @@ def all_methods() -> list[Method]:
         Guardian(use_setpoints=False, name="Guardian w/o setpoint context"),
         Guardian(lags=0, name="Guardian w/o dynamics (static bank)"),
         Guardian(use_integrity=False, name="Guardian w/o integrity layer"),
+        Guardian(use_signatures=False, name="Guardian w/o loop signatures"),
     ]
 
 

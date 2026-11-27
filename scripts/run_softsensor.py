@@ -25,7 +25,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from guardian.evaluate import calibrate, persisted, prepare  # noqa: E402
-from guardian.features import load_split, runs  # noqa: E402
+from guardian.features import load_split, runs, signature_runs  # noqa: E402
 from guardian.methods import Guardian  # noqa: E402
 from guardian.sim import NORMAL, SENSOR  # noqa: E402
 from guardian.softsensor import SoftSensor, aligned_truth  # noqa: E402
@@ -59,6 +59,7 @@ def main() -> None:
     val_normal = [g for n, g in val_runs if val_meta[n]["event_class"] == NORMAL]
 
     g = Guardian().fit(train_runs, val_normal)
+    g.fit_signatures(signature_runs())
     limits, _ = calibrate(prepare(g, val_runs, val_meta), 0.25)
     ss = SoftSensor().fit(train_runs, scaler=g.scaler)
 

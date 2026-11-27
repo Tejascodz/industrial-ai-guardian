@@ -53,6 +53,8 @@ def save(g: Guardian, out_dir: str | Path, limits: np.ndarray | None = None,
         "pca_mu": g.pca.mu, "pca_P": g.pca.P, "pca_lam": g.pca.lam,
         "diff_std": g.diff_std, "sp_lo": g.sp_lo, "sp_hi": g.sp_hi,
     }
+    for tag, xi in g.signatures.items():
+        arrays[f"signature__{tag}"] = xi
     if limits is not None:
         arrays["limits"] = np.asarray(limits, dtype=float)
     np.savez(out / "arrays.npz", **arrays)
@@ -64,6 +66,7 @@ def save(g: Guardian, out_dir: str | Path, limits: np.ndarray | None = None,
         "use_instrument": g.use_instrument,
         "use_setpoints": g.use_setpoints,
         "use_integrity": g.use_integrity,
+        "use_signatures": g.use_signatures,
         "name": g.name,
         "channels": channels,
     }
@@ -115,4 +118,6 @@ def load(in_dir: str | Path, key: bytes | None = None,
     g.pca.k = g.pca.P.shape[1]
     g.pca.Ct = np.eye(len(g.pca.mu)) - g.pca.P @ g.pca.P.T
     g.diff_std, g.sp_lo, g.sp_hi = a["diff_std"], a["sp_lo"], a["sp_hi"]
+    g.use_signatures = cfg.get("use_signatures", True)
+    g.signatures = {k.removeprefix("signature__"): v for k, v in a.items() if k.startswith("signature__")}
     return g, a.get("limits"), cfg.get("channels")

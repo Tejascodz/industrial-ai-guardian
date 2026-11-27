@@ -20,8 +20,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from guardian.evaluate import calibrate, prepare, score, summarize, summarize_attacks  # noqa: E402
-from guardian.features import load_split, runs  # noqa: E402
-from guardian.methods import all_methods  # noqa: E402
+from guardian.features import load_split, runs, signature_runs  # noqa: E402
+from guardian.methods import Guardian, all_methods  # noqa: E402
 from guardian.sim import NORMAL  # noqa: E402
 
 RESULTS = ROOT / "results"
@@ -44,12 +44,17 @@ def main() -> None:
     test_runs = list(runs(test))
     val_normal = [g for n, g in val_runs if val_meta[n]["event_class"] == NORMAL]
 
+    sig_runs = signature_runs()
+    if not sig_runs:
+        raise SystemExit("data/sig.parquet is missing: run scripts/generate_data.py --only sig")
     all_rows, summary, curve, attack_rows = [], [], [], []
     for method in all_methods():
         if args.only and args.only not in method.name:
             continue
         t0 = time.time()
         method.fit(train_runs, val_normal)
+        if isinstance(method, Guardian):
+            method.fit_signatures(sig_runs)
         pv = prepare(method, val_runs, val_meta)
         pt = prepare(method, test_runs, test_meta)
         lim, q = calibrate(pv, args.target_fa)

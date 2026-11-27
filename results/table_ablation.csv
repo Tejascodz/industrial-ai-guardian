@@ -1,6 +1,7 @@
 variant,detected_p_vs_full,correct_class_p_vs_full,detected,correct_class_of_detected,transmitter_named_of_detected,regime_correct_of_detected
-Guardian,1,1,0.943182,0.823293,0.789474,1
-Guardian w/o instrument checks,0.000274658,1.16417e-14,0.886364,0.606838,0.458599,1
-Guardian w/o setpoint context,0.0625,2.38419e-07,0.924242,0.745902,0.789474,0.0526316
-Guardian w/o dynamics (static bank),0.625,0.831812,0.950758,0.808765,0.782353,1
-Guardian w/o integrity layer,1,1,0.943182,0.823293,0.789474,1
+Guardian,1,1,0.943182,0.903614,0.906433,1
+Guardian w/o instrument checks,0.000274658,8.18195e-13,0.886364,0.722222,0.630573,1
+Guardian w/o setpoint context,0.0625,2.38419e-07,0.924242,0.827869,0.906433,0.0526316
+Guardian w/o dynamics (static bank),0.625,0.359283,0.950758,0.876494,0.888235,1
+Guardian w/o integrity layer,1,1,0.943182,0.903614,0.906433,1
+Guardian w/o loop signatures,1,1.90735e-06,0.943182,0.823293,0.789474,1

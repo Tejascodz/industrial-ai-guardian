@@ -7,3 +7,4 @@ Guardian w/o instrument checks,14,42,42,1,0.916201,1,10.5,18,19,19
 Guardian w/o setpoint context,14,42,42,1,0.916201,1,10.5,21,19,19
 Guardian w/o dynamics (static bank),14,42,42,1,0.916201,1,12,21,19,19
 Guardian w/o integrity layer,14,42,42,1,0.916201,1,10.5,0,19,19
+Guardian w/o loop signatures,14,42,42,1,0.916201,1,10.5,21,19,19

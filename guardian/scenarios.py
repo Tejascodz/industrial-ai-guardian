@@ -3,6 +3,8 @@
 Splits use disjoint random seeds:
   train  - normal operating history only (what a plant historian would hold)
   val    - normal runs + labelled events, used to set thresholds
+  dev    - normal runs + labelled events, used to develop later changes
+  sig    - in-loop transmitter faults, the closed-loop fault signatures
   test   - normal runs + labelled events, used only for the reported results
 
 Normal operation is not a single steady state: operators move production
@@ -29,7 +31,7 @@ from .sim import (
     SensorFault,
     SetpointMove,
 )
-from .tags import FIELD_TAGS
+from .tags import FIELD_TAGS, TAGS
 
 # Normal operating envelope (operators may move setpoints within these ranges).
 ENVELOPE = {
@@ -231,6 +233,32 @@ def attack_split(split: str, seed0: int, reps: int, hours: float = 40.0,
     return out
 
 
+def signature_split(seed0: int = 40000, reps: int = 2, hours: float = 20.0,
+                    event_t: float = 12.0) -> list[Scenario]:
+    """Bias and drift on every transmitter inside a control loop, both signs.
+
+    These runs play the role of a plant's dynamic simulator: they show how the
+    closed loop reacts to each transmitter fault, and Guardian learns one fault
+    subspace per transmitter from them (Guardian.fit_signatures). They use
+    their own seeds and are never scored.
+    """
+    rng = np.random.default_rng(seed0)
+    seed = seed0
+    out: list[Scenario] = []
+    for rep in range(reps):
+        for tag in [t for t in FIELD_TAGS if TAGS[t].in_control_loop]:
+            for kind in ("bias", "drift"):
+                for sign in (-1.0, 1.0):
+                    seed += 1
+                    s = _base(rng, f"sig_{tag}_{kind}_{'neg' if sign < 0 else 'pos'}_{rep}", seed, hours, event_t)
+                    u = fault_unit(tag)
+                    p = sign * (rng.uniform(1.0, 3.0) * u if kind == "bias" else rng.uniform(2.0, 4.0) * u / 8.0)
+                    s.event_class = SENSOR
+                    s.sensor_fault = SensorFault(tag, kind, event_t, round(float(p), 6))
+                    out.append(s)
+    return out
+
+
 def all_splits() -> dict[str, list[Scenario]]:
     return {
         "train": [normal_history(1000 + i) for i in range(30)],
@@ -238,6 +266,10 @@ def all_splits() -> dict[str, list[Scenario]]:
         # Seed bases 50000 (test) and 80000 (test_attack) are retired: that split
         # was seen during development (README.md, "What did not work or is not significant").
         "test": make_split("test", 60000, n_normal=24, sensor_reps=2, process_reps=4, regime_reps=3),
+        # Development split for changes made after the first test run: new
+        # methods are designed and tuned here (and on val), never on test.
+        "dev": make_split("dev", 30000, n_normal=6, sensor_reps=3, process_reps=2, regime_reps=1),
+        "sig": signature_split(),
     }
 
 

@@ -21,7 +21,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dashboard.plant import ISA  # noqa: E402
 from guardian.evaluate import DIAG_LATER, calibrate, persisted, prepare  # noqa: E402
-from guardian.features import BURN_IN_H, DATA, add_setpoints, load_split, runs  # noqa: E402
+from guardian.features import BURN_IN_H, DATA, add_setpoints, load_split, runs, signature_runs  # noqa: E402
 from guardian.methods import Guardian  # noqa: E402
 from guardian.sim import BINARY, NORMAL, SENSOR, Scenario, SensorFault, run  # noqa: E402
 from guardian.tags import FIELD_TAGS, TAGS  # noqa: E402
@@ -47,6 +47,7 @@ def main() -> None:
     val, vm = load_split("val")
     vr = list(runs(val))
     g = Guardian().fit([r for _, r in runs(train)], [r for n, r in vr if vm[n]["event_class"] == NORMAL])
+    g.fit_signatures(signature_runs())
     limits, _ = calibrate(prepare(g, vr, vm), 0.25)
 
     fault = SensorFault(args.tag, args.kind, EVENT_T, args.size)

@@ -20,6 +20,6 @@ PCA + RBC,trips_warned,0.8,0.583983,0.919342,16,20
 Guardian,false_alarms_per_day,0.290323,0.203338,0.401929,36,124
 Guardian,detected,0.943182,0.908383,0.965269,249,264
 Guardian,median_delay_h,0.3,0.25,0.35,,249
-Guardian,correct_class,0.823293,0.771111,0.865651,205,249
-Guardian,transmitter_named,0.789474,0.722351,0.843877,135,171
+Guardian,correct_class,0.903614,0.860592,0.934372,225,249
+Guardian,transmitter_named,0.906433,0.853422,0.941584,155,171
 Guardian,trips_warned,1,0.838875,1,20,20

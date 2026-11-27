@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from guardian import artifacts  # noqa: E402
 from guardian.evaluate import calibrate, prepare  # noqa: E402
-from guardian.features import load_split, runs  # noqa: E402
+from guardian.features import load_split, runs, signature_runs  # noqa: E402
 from guardian.methods import Guardian  # noqa: E402
 from guardian.sim import NORMAL  # noqa: E402
 
@@ -40,6 +40,7 @@ def main() -> None:
     val, vm = load_split("val")
     vr = list(runs(val))
     g = Guardian().fit([r for _, r in runs(train)], [r for n, r in vr if vm[n]["event_class"] == NORMAL])
+    g.fit_signatures(signature_runs())
     pv = prepare(g, vr, vm)
     lim, q = calibrate(pv, args.target_fa)
     out = artifacts.save(g, args.out, limits=lim, channels=pv[0].a.channels, key=signing_key())

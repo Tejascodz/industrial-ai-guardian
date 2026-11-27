@@ -111,3 +111,17 @@ Guardian w/o integrity layer,replay_purge_jitter,3,1.0,9.000000000000021,0.0,1,1
 Guardian w/o integrity layer,replay_stripper_product,3,1.0,20.99999999999998,0.0,3,3
 Guardian w/o integrity layer,replay_stripper_product_jitter,3,1.0,20.99999999999998,0.0,3,3
 Guardian w/o integrity layer,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0
+Guardian w/o loop signatures,multi_freeze,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o loop signatures,replay_a_feed,3,1.0,9.000000000000021,1.0,0,0
+Guardian w/o loop signatures,replay_a_feed_jitter,3,1.0,11.999999999999957,0.0,0,0
+Guardian w/o loop signatures,replay_all_transmitters,3,1.0,5.999999999999979,1.0,3,3
+Guardian w/o loop signatures,replay_all_transmitters_jitter,3,1.0,5.999999999999979,0.0,3,3
+Guardian w/o loop signatures,replay_cooling_large,3,1.0,9.000000000000021,1.0,1,1
+Guardian w/o loop signatures,replay_cooling_large_jitter,3,1.0,9.000000000000021,0.0,0,0
+Guardian w/o loop signatures,replay_cooling_small,3,1.0,11.999999999999957,1.0,0,0
+Guardian w/o loop signatures,replay_cooling_small_jitter,3,1.0,11.999999999999957,0.0,0,0
+Guardian w/o loop signatures,replay_purge,3,1.0,9.000000000000021,1.0,2,2
+Guardian w/o loop signatures,replay_purge_jitter,3,1.0,9.000000000000021,0.0,1,1
+Guardian w/o loop signatures,replay_stripper_product,3,1.0,18.000000000000043,1.0,3,3
+Guardian w/o loop signatures,replay_stripper_product_jitter,3,1.0,20.99999999999998,0.0,3,3
+Guardian w/o loop signatures,stealthy_coordinated_bias,3,1.0,48.00000000000004,0.0,0,0

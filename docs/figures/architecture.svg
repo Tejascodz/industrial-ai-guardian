@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
   <title id="t">How Guardian processes one plant sample</title>
-  <desc id="d">A plant sample is validated and repaired, turned into evidence channels by a virtual sensor bank, instrument checks, integrity checks and an operating-envelope check, raises an alarm when any channel stays above its calibrated limit for three samples, and is diagnosed by six ordered rules into a sensor fault, process fault, regime change or integrity attack, which drives the protected soft sensor, the alarm list and the audit log.</desc>
+  <desc id="d">A plant sample is validated and repaired, turned into evidence channels by a virtual sensor bank, instrument checks, integrity checks and an operating-envelope check, raises an alarm when any channel stays above its calibrated limit for three samples, and is diagnosed by seven ordered rules into a sensor fault, process fault, regime change or integrity attack, which drives the protected soft sensor, the alarm list and the audit log.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
@@ -100,7 +100,7 @@
   <path class="ln" d="M932 214 H962" marker-end="url(#a)"/>
 
   <!-- 4: diagnosis -->
-  <rect class="acc" x="966" y="40" width="214" height="348" rx="8"/>
+  <rect class="acc" x="966" y="40" width="214" height="376" rx="8"/>
   <text class="n" x="982" y="66">4</text>
   <text class="h" x="998" y="66">Diagnosis</text>
   <text class="m" x="982" y="86">first rule that fires</text>
@@ -117,8 +117,10 @@
   <text class="s" x="982" y="310">5  replacing one tag by its</text>
   <text class="s" x="999" y="327">virtual value explains all</text>
   <text class="m" x="999" y="344">sensor fault (that tag)</text>
-  <text class="s" x="982" y="368">6  otherwise</text>
-  <text class="m" x="1068" y="368">process fault</text>
+  <text class="s" x="982" y="368">6  residuals match one loop's</text>
+  <text class="m" x="999" y="385">fault signature: sensor fault</text>
+  <text class="s" x="982" y="405">7  otherwise</text>
+  <text class="m" x="1068" y="405">process fault</text>
 
   <!-- onset vote -->
   <rect class="key" x="782" y="318" width="150" height="70" rx="8"/>
@@ -128,7 +130,7 @@
   <path class="ln" d="M932 353 H962" marker-end="url(#a)"/>
 
   <!-- outputs -->
-  <path class="ln" d="M1073 388 V430 H200 V456" marker-end="url(#a)"/>
+  <path class="ln" d="M1073 416 V430 H200 V456" marker-end="url(#a)"/>
   <path class="ln" d="M600 430 V456" marker-end="url(#a)"/>
   <path class="ln" d="M1000 430 V456" marker-end="url(#a)"/>
 

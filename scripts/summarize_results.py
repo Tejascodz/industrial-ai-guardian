@@ -81,7 +81,7 @@ def main_table(df: pd.DataFrame) -> pd.DataFrame:
 
 def loops_table(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
-    for m in ["PCA + RBC", "Guardian"]:
+    for m in ["PCA + RBC", "Guardian w/o loop signatures", "Guardian"]:
         d = df[(df.method == m) & (df.true_class == "sensor_fault")].copy()
         d["in_loop"] = d.true_tag.map(lambda t: TAGS[t].in_control_loop)
         for loop, g in d.groupby("in_loop"):
@@ -90,7 +90,9 @@ def loops_table(df: pd.DataFrame) -> pd.DataFrame:
                          "runs": len(g),
                          "detected": det.shape[0] / len(g),
                          "named_of_detected": _named(det).mean() if len(det) else np.nan,
-                         "detected_k": len(det), "named_k": int(_named(det).sum())})
+                         "detected_k": len(det), "named_k": int(_named(det).sum()),
+                         "wrong_transmitter_k": int(((det.diag_class_1h == "sensor_fault")
+                                                     & (det.diag_tag_1h != det.true_tag)).sum())})
     return pd.DataFrame(rows)
 
 
