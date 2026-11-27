@@ -22,8 +22,9 @@ the process itself has changed, or the data has been tampered with, and keeps th
 <br>
 
 <p align="center">
-  <img src="docs/figures/benchmark.png" width="100%" alt="Grouped bar chart comparing four monitoring methods on 288 held-out test runs at the same false-alarm budget. Events detected: limit checks 52 percent, PCA with contributions 55 percent, PCA with reconstruction-based contributions 55 percent, Guardian 94 percent. Diagnosis class correct, of detected events: 48, 39, 45 and 90 percent. Faulty transmitter named, of detected transmitter faults: 33, 31, 31 and 91 percent. Error bars show 95 percent confidence intervals; Guardian's intervals do not overlap any baseline's.">
+  <img src="docs/figures/dashboard_sensor_fault.png" width="100%" alt="The live control room during a drift on stripper temperature transmitter TI-118. The process flowsheet with ISA instrument bubbles rings TI-118 as doubtful, reading 64.3 degrees against Guardian's model value of 66.6. The Guardian panel reads 'Transmitter fault suspected: TI-118 stripper temperature' and advises checking TI-118 in the field, with ranked evidence. The product-quality estimate, 0.579 mol percent E, is marked Repaired because it runs on Guardian's model value for TI-118. The trends show the transmitter drifting down while Guardian's model stays near 66.6, and the raw soft sensor climbing while the protected one follows the analyzer.">
 </p>
+<p align="center"><sub>The live control room (<code>python -m dashboard</code>) during a drift on stripper temperature transmitter TI-118: Guardian names the transmitter, and the quality estimate keeps following the analyzer.</sub></p>
 
 <table>
 <tr>
@@ -226,6 +227,10 @@ Fault sizes are realistic instrument errors: a bias of 1 to 3 units, a drift of 
 
 Test split, 288 runs. Numbers from `results/table_main.csv`.
 
+<p align="center">
+  <img src="docs/figures/benchmark.png" width="100%" alt="Grouped bar chart comparing four monitoring methods on 288 held-out test runs at the same false-alarm budget. Events detected: limit checks 52 percent, PCA with contributions 55 percent, PCA with reconstruction-based contributions 55 percent, Guardian 94 percent. Diagnosis class correct, of detected events: 48, 39, 45 and 90 percent. Faulty transmitter named, of detected transmitter faults: 33, 31, 31 and 91 percent. Error bars show 95 percent confidence intervals; Guardian's intervals do not overlap any baseline's.">
+</p>
+
 | Method | False alarms / day | Events detected | Median delay | Class correct (of detected) | Transmitter named (of detected sensor faults) | Trips warned |
 |---|---|---|---|---|---|---|
 | Limit checks | 0.26 (0.18–0.36) | 51.9% (45.9–57.9) | 1.60 h (1.10–2.45) | 48.2% (40.0–56.5) | 32.9% (23.2–44.3) | 16 / 20 |
@@ -426,11 +431,7 @@ val_sf_xmeas_9_bias_0: alarm at t = 12.10 h -> ('sensor_fault', 'xmeas_9')
 
 ### Live control room
 
-<p align="center">
-  <img src="docs/figures/dashboard_sensor_fault.png" width="100%" alt="The live control room during a drift on stripper temperature transmitter TI-118. A process flowsheet with ISA instrument bubbles shows TI-118 ringed as doubtful. The Guardian panel reads 'Transmitter fault suspected: TI-118 stripper temperature' with ranked evidence. The product-quality panel shows 0.576 mol percent E marked Repaired, and trends compare the transmitter with Guardian's model value and the raw with the protected soft sensor.">
-</p>
-
-`python -m dashboard` starts a local, ISA-101 style control room around the running simulator. The flowsheet uses ISA-5.1 tag names, alarms follow ISA-18.2 states with four priorities, and every alarm, acknowledgement and trainer action is written to the HMAC-chained audit log. The trainer panel injects transmitter faults, process disturbances, setpoint moves and integrity attacks into the live plant. "Show what was injected" reveals the ground truth. Until then, the server does not send it at all.
+The screenshot at the top of this page shows it. `python -m dashboard` starts a local, ISA-101 style control room around the running simulator. The flowsheet uses ISA-5.1 tag names, alarms follow ISA-18.2 states with four priorities, and every alarm, acknowledgement and trainer action is written to the HMAC-chained audit log. The trainer panel injects transmitter faults, process disturbances, setpoint moves and integrity attacks into the live plant. "Show what was injected" reveals the ground truth. Until then, the server does not send it at all.
 
 <details>
 <summary>WebSocket command reference</summary>
