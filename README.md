@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/figures/banner.svg" width="100%" alt="Field transmitters for flow, level, temperature and pressure feed Guardian over a read-only link. Guardian combines a virtual sensor bank and reconstruction test, closed-loop fault signatures, instrument and integrity checks, DCS setpoint context and a protected soft sensor, and gives every alarm one verdict: transmitter fault with the transmitter named, process fault, regime change, or integrity attack.">
+
 # Industrial AI Guardian
 
 **Fault and integrity monitoring for the transmitters behind industrial soft sensors.**
@@ -9,9 +11,11 @@ the process itself has changed, or the data has been tampered with, and keeps th
 
 [![CI](https://github.com/Tejascodz/industrial-ai-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/Tejascodz/industrial-ai-guardian/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776ab)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.2.0-informational)](CITATION.cff)
+[![Evaluated on](https://img.shields.io/badge/evaluated%20on-Tennessee%20Eastman%20%7C%20HAI%2021.03-blueviolet)](#benchmarks)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-[Overview](#overview) · [Quickstart](#quickstart) · [How it works](#how-it-works) · [Benchmarks](#benchmarks) · [Usage](#usage) · [Related work](#related-work) · [Limitations](#limitations) · [Development](#reproducing-results-and-development) · [Security](#security) · [License](#license-and-citation)
+[Overview](#overview) · [Quickstart](#quickstart) · [How it works](#how-it-works) · [Design decisions](#design-decisions) · [Benchmarks](#benchmarks) · [Usage](#usage) · [Related work](#related-work) · [Limitations](#limitations) · [Roadmap](#roadmap) · [Development](#reproducing-results-and-development) · [Security](#security) · [License](#license-and-citation)
 
 </div>
 
@@ -39,9 +43,32 @@ integrity attacks detected<br>
 <sub>14 attack types, 3 runs each, median delay 10.5 min.<br>Baselines: 38–40 of 42, median 30–33 min.</sub>
 </td>
 </tr>
+<tr>
+<td align="center" width="33%">
+<h3>74% in 1 h</h3>
+of events detected within an hour<br>
+<sub>196 of 264 test events.<br>Baselines: 21–23%.</sub>
+</td>
+<td align="center" width="33%">
+<h3>84%</h3>
+in-loop transmitter faults named<br>
+<sub>84 of 100 detected, 5 blamed on another tag.<br>PCA + RBC: 5% (3 of 57).</sub>
+</td>
+<td align="center" width="33%">
+<h3>45 / 50</h3>
+attacks detected on HIL testbed data<br>
+<sub>HAI 21.03, method unchanged.<br>Baselines: 37–39 of 50.</sub>
+</td>
+</tr>
 </table>
 
-<sub>The figures above come from a simulation: the closed-loop Tennessee Eastman process (NIST TESIM port, Ricker decentralized control), not plant data. A second evaluation on recorded data from the HAI hardware-in-the-loop testbed, with the method unchanged, is in [Hardware-in-the-loop data](#hardware-in-the-loop-data-hai-2103); it is still not a real plant, and naming the faulty transmitter is much weaker there. The 288 test runs use seeds that were generated after the first version's design was frozen; the loop signatures added later were tuned on a separate development split. Every method is calibrated to the same budget of 0.25 false alarms per day on a separate validation split. On the test split, Guardian's false-alarm rate is the highest of the four: 0.29 per day, against 0.26 to 0.27 for the baselines, with overlapping intervals. Everything runs on CPU, and the simulation is deterministic given its seeds. To name transmitters inside control loops, Guardian uses fault signatures learned from extra simulated faults on the same simulator, which the baselines do not get; a real site would need a dynamic model of its loops for this. Guardian misses 15 events and still reports most in-loop level transmitter faults as process faults. Both are covered in [Limitations](#limitations).</sub>
+> [!NOTE]
+> **How to read these numbers.**
+> - All but the last tile come from a simulation: the closed-loop Tennessee Eastman process (NIST TESIM port, Ricker decentralized control). The last comes from recorded [hardware-in-the-loop data](#hardware-in-the-loop-data-hai-2103), which is still not a real plant, and naming the faulty transmitter is much weaker there.
+> - Every method is calibrated to the same budget of 0.25 false alarms per day on a separate validation split. On test, Guardian's rate is the highest of the four (0.29 per day, against 0.26 to 0.27), with overlapping intervals.
+> - The 288 test runs use seeds generated after the first version's design was frozen. The loop signatures added later were tuned on a separate development split.
+> - To name transmitters inside control loops, Guardian uses fault signatures learned from extra simulated faults on the same simulator, which the baselines do not get. A real site would need a dynamic model of its loops for this.
+> - Guardian misses 15 of 264 events and still reports most in-loop level transmitter faults as process faults. See [Limitations](#limitations).
 
 ## Overview
 
@@ -55,6 +82,15 @@ A soft sensor estimates a quality variable that cannot be measured online from t
 - **Protected soft sensor.** While a transmitter outside a loop is faulty, the soft sensor runs on that tag's virtual value. Every estimate carries a status: OK, RECONSTRUCTED or UNTRUSTED.
 
 What ships: a Python library (`guardian`), a C++ plant simulator (`sim/te_cli`), a local live control room (`python -m dashboard`), a read-only OPC UA link (`scripts/opcua_demo.py`), a loader for the HAI testbed data (`guardian/hai.py`) and scripts that rebuild every result and figure in this README. Guardian takes its tag list, field transmitters, setpoints and sample period from a plant description (`guardian/plant.py`), so the same code runs on both plants.
+
+### Evidence so far
+
+| Level | Data | Status | Main result |
+|---|---|---|---|
+| Simulation | Closed-loop Tennessee Eastman, 288 test runs, 42 attack runs | Done | 94.3% of events detected, 91% of transmitter faults named, all 42 attacks detected |
+| Hardware-in-the-loop | HAI 21.03: physical boiler, turbine and water-treatment rigs with a simulated power plant, 50 labelled attacks | Done | 90% of attacks and 74% of injected transmitter faults detected; transmitter named in 40% |
+| Real process faults | Public data recorded on a real rig (candidate: the PRONTO benchmark from Cranfield University's multiphase flow facility) | Planned | |
+| Live plant | Read-only connection to a running unit | Not done | |
 
 ## Quickstart
 
@@ -153,6 +189,20 @@ The soft sensor (`guardian/softsensor.py`) is a ridge model that estimates produ
 - **RECONSTRUCTED:** a sensor fault on a transmitter outside any control loop. The estimate uses that tag's virtual value.
 - **UNTRUSTED:** a process fault, a regime change, an attack, or a sensor fault inside a loop. In those cases the real process has moved, so no input repair can recover the true value.
 
+## Design decisions
+
+The choices that shape Guardian, why they were made, and what they cost.
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| A bank of linear ridge models, one per tag, instead of one deep network | Every residual belongs to one transmitter and can be explained to an operator. Fits in seconds on a CPU, needs no GPU at the plant, and a reconstruction test is a closed-form calculation | Linear models miss strongly nonlinear behaviour; the lags add some dynamics but did not measurably help here |
+| A faulty tag never predicts itself | A transmitter cannot vouch for its own reading, so its residual is an independent check, and replacing it by its virtual value is a fair hypothesis test | Tags with no correlated neighbours cannot be checked this way |
+| Alarm limits set by a false-alarm budget, one per channel family | Operators judge a monitor by its nuisance alarms (ISA-18.2). A few family limits held up on new seeds; one extreme quantile per channel did not | Guardian's false-alarm rate on test (0.29 per day) is slightly above the budget |
+| Diagnosis by ordered rules, not a classifier | Each verdict names the evidence that produced it, and the order encodes what an engineer checks first: data integrity, then instruments, then operator moves, then the process | The order is fixed by hand. A case that two rules could explain gets the first one |
+| Read-only, never in the control path | A monitor that can write to a DCS is an attack surface (IEC 62443). Guardian reads over encrypted OPC UA and signs its own models and audit log | It cannot add a watermark to the control signal, so replays with added noise are only caught as faults |
+| Loop signatures optional, learned from a simulator | Inside a loop, normal data alone cannot tell a biased transmitter from a process change; a dynamic model of the loops can | They help only where such a model exists, and only as much as it matches the plant |
+| Fixed test split, run once per method version, with every ablation reported | Numbers that were tuned on the test set say nothing about the next plant | Some negative results stay in the README, such as the dynamic bank not beating the static one |
+
 ## Benchmarks
 
 ### Setup
@@ -185,6 +235,22 @@ Test split, 288 runs. Numbers from `results/table_main.csv`.
 
 95% intervals in brackets. "Trips warned" counts plant shutdowns preceded by an alarm. Guardian's diagnosis uses the loop signatures learned from simulated faults; the baselines use normal data only. Without the signatures, Guardian's class is correct for 82.3% of detected events and the transmitter is named in 78.9% (see [Ablations](#ablations)). On the same 264 events, Guardian detects every event that any baseline detects, plus 103 to 112 events they miss (exact McNemar test, p < 10⁻³⁰; `results/table_paired.csv`). The trend holds at other budgets. At about 0.1 false alarms per day on test, Guardian detects 92 to 93% of events and the baselines detect 47 to 55% (`results/operating_curve.csv`).
 
+<p align="center">
+  <img src="docs/figures/operating_curve.png" width="100%" alt="Line chart of events detected against false alarms per day on test, log scale, for six calibration budgets. Guardian stays between 92 and 99 percent from about 0.08 to 1.2 false alarms per day. Limit checks stay between 46 and 59 percent, and the two PCA methods, whose lines coincide, between 50 and 62 percent.">
+</p>
+
+Speed matters as much as coverage: an operator can still act on an alarm in the first hour. Guardian detects 74% of all test events within 1 hour of their start (196 of 264); the baselines detect 21 to 23%.
+
+<p align="center">
+  <img src="docs/figures/detection_time.png" width="100%" alt="Cumulative line chart of the share of 264 test events detected against hours since the event started, up to 12 hours. Guardian rises to about 67 percent within 30 minutes and 74 percent within 1 hour, and levels off near 93 percent after about 5 hours. Limit checks reach about 21 percent at 1 hour and 47 percent at 12 hours; the two PCA methods, whose lines coincide, reach about 23 percent at 1 hour and 52 percent at 12 hours.">
+</p>
+
+What each detected event was diagnosed as, 1 hour after the alarm:
+
+<p align="center">
+  <img src="docs/figures/confusion.png" width="48%" alt="Confusion matrix of Guardian's diagnosis against ground truth for detected events. Sensor faults: 94 percent diagnosed as sensor fault (160), 6 percent as process fault (11). Process faults: 24 percent blamed on a sensor (13), 76 percent diagnosed as process fault (41). Regime changes: 100 percent recognised (24).">
+</p>
+
 ### Where the difference comes from
 
 Transmitter faults inside and outside control loops (`results/table_loops.csv`):
@@ -195,6 +261,10 @@ Transmitter faults inside and outside control loops (`results/table_loops.csv`):
 | Inside a control loop | 104 | 55% / 5% / 15 | 96% / 64% / 5 | **96% / 84% / 5** |
 
 "Named" is the share of detected faults where the right transmitter is named; "wrong tag" counts detected faults blamed on another transmitter. Inside a loop, classical isolation names the right tag in 3 of 57 detected faults. Guardian names it in 84 of 100, up from 64 without the loop signatures, and blames the wrong transmitter as often as before (5 times). Bias and drift on in-loop flow transmitters are now named in 26 of 28 detected cases, against 9 of 28 before (`results/table_inloop.csv`).
+
+<p align="center">
+  <img src="docs/figures/loops.png" width="100%" alt="Grouped bar chart of the share of detected transmitter faults where the right transmitter is named. Outside control loops: PCA with RBC 77 percent (24 of 31, 0 wrong), Guardian without loop signatures 100 percent (71 of 71), Guardian 100 percent (71 of 71). Inside a control loop: PCA with RBC 5 percent (3 of 57, 15 wrong), Guardian without loop signatures 64 percent (64 of 100, 5 wrong), Guardian 84 percent (84 of 100, 5 wrong).">
+</p>
 
 By fault type, transmitter named among detected faults (`results/table_fault_type.csv`):
 
@@ -225,6 +295,10 @@ Results from `results/table_attacks.csv` and `results/attack_summary.csv`.
 | Slow coordinated bias along the main correlation | 48 min (baselines: 15 to 26 h, or missed) | 0 |
 
 Every attack is detected, but only exact replays and freezes are recognised as attacks. A replay with added noise defeats the exact-repetition check and is reported as a fault: the alarm still fires, but its label is wrong.
+
+<p align="center">
+  <img src="docs/figures/dashboard_attack.png" width="100%" alt="The live control room during an exact replay attack. The Guardian panel shows a data integrity alarm: readings are repeating exactly, frozen together or broken, with the advice not to act on these values and to escalate to OT security. The evidence lists TI-121 and TIC-109 repeating an earlier recording exactly. The product-quality estimate is marked Untrusted, and the trend shades the alarm period.">
+</p>
 
 ### Protected soft sensor
 
@@ -408,6 +482,19 @@ Guardian does not introduce a new statistical method. Its contribution is the co
 - **Fixed models.** Guardian is fitted once on normal history. It does not adapt to slow plant changes, and retraining is manual.
 - **Attacks that know the plant.** An attacker who can make every transmitter consistent with the plant's physics, or who adds noise to a replay, is not recognised as an attacker. The alarm still fires, but it is labelled as a fault.
 - **Not a safety system.** Guardian never acts on the plant and must not be placed in a control or safety path.
+
+## Roadmap
+
+Each item is a separate change, with its own development split and a single run on held-out data.
+
+| Next step | What it adds | How it will be judged |
+|---|---|---|
+| Real process faults | The PRONTO benchmark, recorded on a real multiphase flow rig, where every fault is a process fault | How often Guardian wrongly blames a transmitter on real data |
+| Historian data | Import from historian exports, and a check of how much each tag was compressed (swinging-door compression removes the noise that limits are built on) | False alarms per day as compression increases |
+| Scale and drift | Sparse models for hundreds of tags, and retraining that is only accepted after a shadow period | Fit time and false alarms on a larger tag set; no silent retraining during a fault |
+| Several faults at once | Reconstruction over pairs of transmitters | Both transmitters named, without more false blame on single faults |
+| Replays with added noise | A check that the controller's action and the measured response still agree | Noisy replays recognised as attacks, not faults |
+| Calibrated alarms | A stated false-alarm guarantee per day, from conformal calibration on blocks of normal data | Test false alarms inside the stated bound |
 
 ## Reproducing results and development
 

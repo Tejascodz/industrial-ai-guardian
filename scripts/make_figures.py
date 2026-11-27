@@ -231,11 +231,113 @@ def hai_bars() -> None:
     plt.close(fig)
 
 
+GREYS = {"Limit checks": "#d0d7de", "PCA + contributions": "#afb8c1", "PCA + RBC": "#8c959f", "Guardian": BLUE}
+DASHES = {"Limit checks": (0, (1, 1.5)), "PCA + contributions": (0, (4, 2)), "PCA + RBC": (0, (6, 2, 1, 2)),
+          "Guardian": "solid"}
+
+
+def _title(ax, title: str, subtitle: str) -> None:
+    ax.set_title(title, loc="left", fontsize=12, fontweight="bold", pad=22)
+    ax.text(0, 1.035, subtitle, transform=ax.transAxes, fontsize=9, color=MUTED)
+
+
+def operating_curve() -> None:
+    """Detection against false alarms per day on test, one point per calibration budget."""
+    c = pd.read_csv(RES / "operating_curve.csv")
+    fig, ax = plt.subplots(figsize=(10, 4.2))
+    for m in ["Limit checks", "PCA + contributions", "PCA + RBC", "Guardian"]:
+        d = c[c.method == m].sort_values("false_alarms_per_day")
+        ax.plot(d.false_alarms_per_day, d.detection_rate, color="#57606a" if m != "Guardian" else BLUE,
+                linestyle=DASHES[m], linewidth=2 if m == "Guardian" else 1.4, marker="o", markersize=4.5,
+                label=m, zorder=3 if m == "Guardian" else 2)
+    ax.axvline(0.25, color=MUTED, linewidth=0.8, linestyle=":")
+    ax.text(0.26, 0.05, "budget used in the tables", fontsize=8.5, color=MUTED)
+    ax.set_xscale("log")
+    ax.set_xticks([0.05, 0.1, 0.25, 0.5, 1, 2], ["0.05", "0.1", "0.25", "0.5", "1", "2"])
+    ax.minorticks_off()
+    ax.set_ylim(0, 1.02)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
+    ax.set_xlabel("False alarms per day on test (log scale)")
+    ax.set_ylabel("Events detected")
+    _title(ax, "The gap holds at every false-alarm budget",
+           "Each method recalibrated on validation for 6 budgets, then scored on the 288 test runs. "
+           "The two PCA methods detect the same events, so their lines coincide.")
+    ax.legend(ncol=4, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fig.tight_layout()
+    fig.savefig(FIG / "operating_curve.png", dpi=200, facecolor="white")
+    plt.close(fig)
+
+
+def detection_time() -> None:
+    """Share of the 264 test events detected within a given time of their start."""
+    df = pd.read_csv(RES / "benchmark_runs.csv")
+    grid = np.linspace(0, 12, 241)
+    fig, ax = plt.subplots(figsize=(10, 4.2))
+    for m in ["Limit checks", "PCA + contributions", "PCA + RBC", "Guardian"]:
+        ev = df[(df.method == m) & (df.true_class != NORMAL)]
+        delay = ev.delay_h.to_numpy()
+        share = [(np.nan_to_num(delay, nan=np.inf) <= h).mean() for h in grid]
+        ax.plot(grid, share, color="#57606a" if m != "Guardian" else BLUE, linestyle=DASHES[m],
+                linewidth=2 if m == "Guardian" else 1.4, label=m, zorder=3 if m == "Guardian" else 2)
+    g = df[(df.method == "Guardian") & (df.true_class != NORMAL)].delay_h
+    ax.annotate(f"{(g <= 1).mean():.0%} within 1 h", xy=(1, (g <= 1).mean()), xytext=(1.6, 0.6),
+                fontsize=9, color=INK, arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 0.8})
+    ax.set_xlim(0, 12)
+    ax.set_xticks(range(0, 13, 2))
+    ax.set_ylim(0, 1.02)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
+    ax.set_xlabel("Hours since the event started")
+    ax.set_ylabel("Events detected so far")
+    _title(ax, "How fast each method raises the alarm",
+           "264 test events at 0.25 false alarms per day; the two PCA lines coincide. "
+           "Shown for the first 12 h; events detected later, or never, keep every line below 100%.")
+    ax.legend(ncol=4, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fig.tight_layout()
+    fig.savefig(FIG / "detection_time.png", dpi=200, facecolor="white")
+    plt.close(fig)
+
+
+def loop_bars() -> None:
+    """Transmitter named, outside and inside control loops (results/table_loops.csv)."""
+    t = pd.read_csv(RES / "table_loops.csv")
+    order = ["PCA + RBC", "Guardian w/o loop signatures", "Guardian"]
+    labels = {"PCA + RBC": "PCA + RBC", "Guardian w/o loop signatures": "Guardian without loop signatures",
+              "Guardian": "Guardian"}
+    colors = ["#afb8c1", "#93b4f5", BLUE]
+    groups = ["outside control loops", "inside a control loop"]
+    fig, ax = plt.subplots(figsize=(10, 4.2))
+    w = 0.26
+    for n, m in enumerate(order):
+        d = t[t.method == m].set_index("transmitters").loc[groups]
+        pos = np.arange(2) + (n - 1) * w
+        ax.bar(pos, d.named_of_detected, w * 0.92, color=colors[n], label=labels[m], zorder=2)
+        for x_, v, k, nn, wr in zip(pos, d.named_of_detected, d.named_k, d.detected_k, d.wrong_transmitter_k,
+                                    strict=True):
+            ax.text(x_, v + 0.075, f"{v:.0%}", ha="center", fontsize=9.5, color=INK,
+                    fontweight="bold" if m == "Guardian" else "normal")
+            ax.text(x_, v + 0.025, f"{k} of {nn}, {wr} wrong", ha="center", fontsize=7.5, color=MUTED)
+    ax.set_xticks(range(2), ["Transmitters outside control loops\n72 test runs",
+                             "Transmitters inside a control loop\n104 test runs"], fontsize=9.5)
+    ax.set_ylim(0, 1.18)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
+    ax.grid(axis="x", visible=False)
+    _title(ax, "Naming the faulty transmitter, outside and inside control loops",
+           "Share of detected transmitter faults where the right transmitter is named. "
+           "Under each value: named of detected, and faults blamed on another transmitter.")
+    ax.legend(ncol=3, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fig.tight_layout()
+    fig.savefig(FIG / "loops.png", dpi=200, facecolor="white")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     FIG.mkdir(parents=True, exist_ok=True)
     benchmark_bars()
     hai_bars()
     confusion()
+    operating_curve()
+    detection_time()
+    loop_bars()
     g, lim, ss, test, tm = _fitted()
     loop_fault(g, lim, test, tm)
     protected_softsensor(g, lim, ss, test, tm)
